@@ -5,6 +5,7 @@ import { VideoFeed } from "@/components/video/VideoFeed";
 import { VideoStatus } from "@/components/video/VideoStatus";
 import { getFilters, getInterests, getProgress } from "@/lib/local";
 import type { VideoItem } from "@/lib/schemas";
+import { shuffle } from "@/lib/shuffle";
 
 function videoQuery(): string {
   const params = new URLSearchParams();
@@ -16,11 +17,12 @@ function videoQuery(): string {
   return params.toString();
 }
 
-/** Unwatched chapters first, keeping the server's mix of banks. */
+/** Random order like the Fun facts feed (a new shuffle per visit), unwatched chapters first. */
 function unwatchedFirst(items: VideoItem[]): VideoItem[] {
   const seen = new Set(getProgress().seen);
   const watched = (item: VideoItem) => item.chapter.scenes.every((scene) => seen.has(scene.cardId));
-  return [...items.filter((item) => !watched(item)), ...items.filter(watched)];
+  const mixed = shuffle(items, Date.now());
+  return [...mixed.filter((item) => !watched(item)), ...mixed.filter(watched)];
 }
 
 /** The Videos tab: chapters from every bank matching the learner's interests and filters. */

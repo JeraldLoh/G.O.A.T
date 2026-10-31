@@ -1,13 +1,12 @@
 "use client";
 
-import { BarChart3, Clapperboard, Layers, Trophy, Upload } from "lucide-react";
+import { BarChart3, Layers, Trophy, Upload } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { href: "/", label: "Feed", icon: Layers },
-  { href: "/videos", label: "Videos", icon: Clapperboard },
   { href: "/upload", label: "Upload", icon: Upload },
   { href: "/progress", label: "Progress", icon: Trophy },
   { href: "/stats", label: "Stats", icon: BarChart3 },
@@ -21,7 +20,7 @@ export function TabBar() {
   if (FULL_SCREEN.some((route) => pathname.startsWith(route))) return null;
 
   return (
-    <nav className="grid grid-cols-5 border-t bg-background pb-[env(safe-area-inset-bottom)]">
+    <nav className="grid grid-cols-4 border-t bg-background pb-[env(safe-area-inset-bottom)]">
       {TABS.map(({ href, label, icon: Icon }) => {
         const active = pathname === href;
         return (
