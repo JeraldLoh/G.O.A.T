@@ -1,0 +1,129 @@
+{
+  "bank": {
+    "title": "How Plants Make Food",
+    "subject": "science",
+    "level": "beginner",
+    "tags": [
+      "biology",
+      "plants",
+      "energy"
+    ],
+    "createdAt": "2026-10-31T00:00:00.000Z",
+    "id": "seed-photosynthesis",
+    "license": "CC0-1.0",
+    "attribution": "Written by the Community Knowledge Bank team",
+    "origin": "community",
+    "sourceText": "# How Plants Make Food\n\n## Capturing light\n\nPhotosynthesis is the process plants use to turn light energy into stored chemical energy. It takes place mainly in the leaves, inside tiny compartments called chloroplasts. Chloroplasts contain chlorophyll, a green pigment that absorbs red and blue light. Green light is mostly reflected, which is why leaves look green to us.\n\nWhen chlorophyll absorbs light, its energy is used to split water molecules. This step releases oxygen as a by-product, and the oxygen leaves the plant through small pores called stomata.\n\n## Building sugar\n\nThe energy captured from light is held briefly in carrier molecules. The plant then spends that energy in a cycle of reactions that does not need light directly. In this cycle, carbon dioxide taken in from the air is built into sugar.\n\nPlants use that sugar in two ways. Some is burned straight away for energy, and some is linked into long chains such as starch for storage or cellulose for building cell walls. Nearly every food chain on land begins with this stored energy.\n",
+    "ratingsUp": 0,
+    "ratingsDown": 0
+  },
+  "cards": [
+    {
+      "id": "seed-photosynthesis-card-1",
+      "bankId": "seed-photosynthesis",
+      "topic": "Capturing light",
+      "title": "What photosynthesis does",
+      "body": "Plants convert light energy into chemical energy they can store. Most of this work happens in the leaves, in small compartments called chloroplasts.",
+      "quote": "Photosynthesis is the process plants use to turn light energy into stored chemical energy.",
+      "sourceStart": 44,
+      "sourceEnd": 134,
+      "verified": true,
+      "flags": 0,
+      "order": 0
+    },
+    {
+      "id": "seed-photosynthesis-card-2",
+      "bankId": "seed-photosynthesis",
+      "topic": "Capturing light",
+      "title": "Why leaves look green",
+      "body": "Chlorophyll is the pigment that absorbs light. It takes in red and blue light but bounces most green light back, so leaves appear green.",
+      "quote": "Green light is mostly reflected, which is why leaves look green to us.",
+      "sourceStart": 301,
+      "sourceEnd": 371,
+      "verified": true,
+      "flags": 0,
+      "order": 1
+    },
+    {
+      "id": "seed-photosynthesis-card-3",
+      "bankId": "seed-photosynthesis",
+      "topic": "Capturing light",
+      "title": "Where the oxygen comes from",
+      "body": "Absorbed light energy splits water molecules. Oxygen is released as a by-product and exits through pores called stomata.",
+      "quote": "This step releases oxygen as a by-product, and the oxygen leaves the plant through small pores called stomata.",
+      "sourceStart": 450,
+      "sourceEnd": 560,
+      "verified": true,
+      "flags": 0,
+      "order": 2
+    },
+    {
+      "id": "seed-photosynthesis-card-4",
+      "bankId": "seed-photosynthesis",
+      "topic": "Building sugar",
+      "title": "Air becomes sugar",
+      "body": "The captured energy powers a cycle of reactions that does not directly need light. That cycle builds carbon dioxide from the air into sugar.",
+      "quote": "In this cycle, carbon dioxide taken in from the air is built into sugar.",
+      "sourceStart": 743,
+      "sourceEnd": 815,
+      "verified": true,
+      "flags": 0,
+      "order": 3
+    },
+    {
+      "id": "seed-photosynthesis-card-5",
+      "bankId": "seed-photosynthesis",
+      "topic": "Building sugar",
+      "title": "What plants do with sugar",
+      "body": "Some sugar is burned right away for energy. The rest is linked into starch for storage or cellulose for cell walls.",
+      "quote": "some is linked into long chains such as starch for storage or cellulose for building cell walls",
+      "sourceStart": 897,
+      "sourceEnd": 992,
+      "verified": true,
+      "flags": 0,
+      "order": 4
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "seed-photosynthesis-quiz-1",
+      "bankId": "seed-photosynthesis",
+      "topic": "Capturing light",
+      "question": "Why do leaves usually look green?",
+      "options": [
+        "Chlorophyll reflects most green light",
+        "Chlorophyll absorbs only green light",
+        "Stomata are green"
+      ],
+      "answerIndex": 0,
+      "explanation": "Chlorophyll absorbs red and blue light and mostly reflects green."
+    },
+    {
+      "id": "seed-photosynthesis-quiz-2",
+      "bankId": "seed-photosynthesis",
+      "topic": "Capturing light",
+      "question": "What is split to release oxygen?",
+      "options": [
+        "Carbon dioxide",
+        "Water molecules",
+        "Sugar"
+      ],
+      "answerIndex": 1,
+      "explanation": "Light energy splits water, and oxygen is the by-product."
+    },
+    {
+      "id": "seed-photosynthesis-quiz-3",
+      "bankId": "seed-photosynthesis",
+      "topic": "Building sugar",
+      "question": "What is built into sugar during the cycle of reactions?",
+      "options": [
+        "Oxygen",
+        "Chlorophyll",
+        "Carbon dioxide"
+      ],
+      "answerIndex": 2,
+      "explanation": "Carbon dioxide taken in from the air is built into sugar."
+    }
+  ],
+  "generation": null
+}

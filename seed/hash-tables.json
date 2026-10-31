@@ -1,0 +1,129 @@
+{
+  "bank": {
+    "title": "Hash Tables in Plain English",
+    "subject": "technology",
+    "level": "intermediate",
+    "tags": [
+      "programming",
+      "data-structures",
+      "algorithms"
+    ],
+    "createdAt": "2026-10-31T00:01:00.000Z",
+    "id": "seed-hash-tables",
+    "license": "CC0-1.0",
+    "attribution": "Written by the Community Knowledge Bank team",
+    "origin": "community",
+    "sourceText": "# Hash Tables in Plain English\n\n## Finding things fast\n\nSearching an unsorted list means checking items one by one, so the work grows with the length of the list. A hash table avoids this by computing where an item belongs. A hash function takes a key, such as a word, and turns it into a number. That number, reduced to fit the table, is the index of a slot in an array.\n\nLooking up a key repeats the same calculation, so the table goes straight to the right slot. On average this takes the same time no matter how many items are stored.\n\n## When keys collide\n\nTwo different keys can produce the same slot, which is called a collision. One common fix is chaining, where each slot holds a small list of the entries that landed there. Lookups then scan only that short list instead of the whole table.\n\nAs a table fills up, collisions become more frequent and lookups slow down. The share of slots in use is called the load factor. When it passes a set limit, the table allocates a larger array and moves every entry to its new position. This resize is expensive, but it happens rarely enough that the average cost stays low.\n",
+    "ratingsUp": 0,
+    "ratingsDown": 0
+  },
+  "cards": [
+    {
+      "id": "seed-hash-tables-card-1",
+      "bankId": "seed-hash-tables",
+      "topic": "Finding things fast",
+      "title": "The problem with lists",
+      "body": "In an unsorted list you must check items one at a time. The longer the list, the more work each search takes.",
+      "quote": "Searching an unsorted list means checking items one by one, so the work grows with the length of the list.",
+      "sourceStart": 56,
+      "sourceEnd": 162,
+      "verified": true,
+      "flags": 0,
+      "order": 0
+    },
+    {
+      "id": "seed-hash-tables-card-2",
+      "bankId": "seed-hash-tables",
+      "topic": "Finding things fast",
+      "title": "Keys become positions",
+      "body": "A hash function turns a key into a number. After being reduced to fit the table, that number points at a slot in an array.",
+      "quote": "A hash function takes a key, such as a word, and turns it into a number.",
+      "sourceStart": 224,
+      "sourceEnd": 296,
+      "verified": true,
+      "flags": 0,
+      "order": 1
+    },
+    {
+      "id": "seed-hash-tables-card-3",
+      "bankId": "seed-hash-tables",
+      "topic": "Finding things fast",
+      "title": "Why lookups stay quick",
+      "body": "A lookup runs the same calculation and jumps straight to the slot. The average time does not depend on how many items are stored.",
+      "quote": "On average this takes the same time no matter how many items are stored.",
+      "sourceStart": 466,
+      "sourceEnd": 538,
+      "verified": true,
+      "flags": 0,
+      "order": 2
+    },
+    {
+      "id": "seed-hash-tables-card-4",
+      "bankId": "seed-hash-tables",
+      "topic": "When keys collide",
+      "title": "Handling collisions",
+      "body": "Different keys can map to the same slot. With chaining, each slot keeps a short list, and only that list gets scanned.",
+      "quote": "One common fix is chaining, where each slot holds a small list of the entries that landed there.",
+      "sourceStart": 637,
+      "sourceEnd": 733,
+      "verified": true,
+      "flags": 0,
+      "order": 3
+    },
+    {
+      "id": "seed-hash-tables-card-5",
+      "bankId": "seed-hash-tables",
+      "topic": "When keys collide",
+      "title": "Growing the table",
+      "body": "The load factor measures how full the table is. Past a set limit, the table moves everything into a larger array, which is costly but rare.",
+      "quote": "When it passes a set limit, the table allocates a larger array and moves every entry to its new position.",
+      "sourceStart": 931,
+      "sourceEnd": 1036,
+      "verified": true,
+      "flags": 0,
+      "order": 4
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "seed-hash-tables-quiz-1",
+      "bankId": "seed-hash-tables",
+      "topic": "Finding things fast",
+      "question": "What does a hash function produce from a key?",
+      "options": [
+        "A number",
+        "A sorted list",
+        "A new key"
+      ],
+      "answerIndex": 0,
+      "explanation": "It turns the key into a number, which is then reduced to a slot index."
+    },
+    {
+      "id": "seed-hash-tables-quiz-2",
+      "bankId": "seed-hash-tables",
+      "topic": "When keys collide",
+      "question": "What is a collision?",
+      "options": [
+        "A table running out of memory",
+        "Two different keys producing the same slot",
+        "A key that is too long"
+      ],
+      "answerIndex": 1,
+      "explanation": "A collision is when two different keys land in the same slot."
+    },
+    {
+      "id": "seed-hash-tables-quiz-3",
+      "bankId": "seed-hash-tables",
+      "topic": "When keys collide",
+      "question": "What does the load factor measure?",
+      "options": [
+        "How long a key is",
+        "How slow the hash function is",
+        "The share of slots in use"
+      ],
+      "answerIndex": 2,
+      "explanation": "The load factor is the share of slots in use."
+    }
+  ],
+  "generation": null
+}

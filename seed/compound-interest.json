@@ -1,0 +1,129 @@
+{
+  "bank": {
+    "title": "Compound Interest Basics",
+    "subject": "business",
+    "level": "beginner",
+    "tags": [
+      "finance",
+      "saving",
+      "math"
+    ],
+    "createdAt": "2026-10-31T00:02:00.000Z",
+    "id": "seed-compound-interest",
+    "license": "CC0-1.0",
+    "attribution": "Written by the Community Knowledge Bank team",
+    "origin": "community",
+    "sourceText": "# Compound Interest Basics\n\n## Interest on interest\n\nSimple interest is paid only on the amount you first deposited. Compound interest is also paid on the interest already earned, so the balance grows faster each period. Put 1,000 dollars in an account paying 5 percent a year, and after one year you hold 1,050 dollars. In the second year you earn 5 percent of 1,050 dollars, which is 52.50 dollars instead of 50 dollars.\n\nThe gap looks tiny at first. Over decades it becomes the largest part of the balance.\n\n## Time and rate\n\nThe formula is the starting amount times one plus the rate, raised to the number of periods. Because the number of periods is an exponent, time matters more than most people expect. Someone who starts saving ten years earlier can end up well ahead of someone who saves more each month but starts later.\n\nA handy estimate is the rule of 72. Divide 72 by the yearly percentage rate to get the rough number of years money takes to double. At 6 percent that is about 12 years. The same arithmetic works against you on debt, where unpaid interest is added to what you owe.\n",
+    "ratingsUp": 0,
+    "ratingsDown": 0
+  },
+  "cards": [
+    {
+      "id": "seed-compound-interest-card-1",
+      "bankId": "seed-compound-interest",
+      "topic": "Interest on interest",
+      "title": "Simple versus compound",
+      "body": "Simple interest applies only to your original deposit. Compound interest also applies to interest you have already earned.",
+      "quote": "Compound interest is also paid on the interest already earned, so the balance grows faster each period.",
+      "sourceStart": 117,
+      "sourceEnd": 220,
+      "verified": true,
+      "flags": 0,
+      "order": 0
+    },
+    {
+      "id": "seed-compound-interest-card-2",
+      "bankId": "seed-compound-interest",
+      "topic": "Interest on interest",
+      "title": "A worked example",
+      "body": "With 1,000 dollars at 5 percent a year, you hold 1,050 dollars after one year. The next year's interest is 52.50 dollars rather than 50.",
+      "quote": "In the second year you earn 5 percent of 1,050 dollars, which is 52.50 dollars instead of 50 dollars.",
+      "sourceStart": 321,
+      "sourceEnd": 422,
+      "verified": true,
+      "flags": 0,
+      "order": 1
+    },
+    {
+      "id": "seed-compound-interest-card-3",
+      "bankId": "seed-compound-interest",
+      "topic": "Time and rate",
+      "title": "Why time matters most",
+      "body": "The number of periods sits in the exponent of the formula. That makes time more powerful than most people expect.",
+      "quote": "Because the number of periods is an exponent, time matters more than most people expect.",
+      "sourceStart": 622,
+      "sourceEnd": 710,
+      "verified": true,
+      "flags": 0,
+      "order": 2
+    },
+    {
+      "id": "seed-compound-interest-card-4",
+      "bankId": "seed-compound-interest",
+      "topic": "Time and rate",
+      "title": "The rule of 72",
+      "body": "Divide 72 by the yearly percentage rate to estimate how many years money takes to double. At 6 percent, that is about 12 years.",
+      "quote": "Divide 72 by the yearly percentage rate to get the rough number of years money takes to double.",
+      "sourceStart": 869,
+      "sourceEnd": 964,
+      "verified": true,
+      "flags": 0,
+      "order": 3
+    },
+    {
+      "id": "seed-compound-interest-card-5",
+      "bankId": "seed-compound-interest",
+      "topic": "Time and rate",
+      "title": "It works on debt too",
+      "body": "Compounding also applies to what you owe. Unpaid interest is added to the debt, so the balance grows against you.",
+      "quote": "The same arithmetic works against you on debt, where unpaid interest is added to what you owe.",
+      "sourceStart": 1002,
+      "sourceEnd": 1096,
+      "verified": true,
+      "flags": 0,
+      "order": 4
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "seed-compound-interest-quiz-1",
+      "bankId": "seed-compound-interest",
+      "topic": "Interest on interest",
+      "question": "How much interest does 1,050 dollars earn in a year at 5 percent?",
+      "options": [
+        "50 dollars",
+        "52.50 dollars",
+        "105 dollars"
+      ],
+      "answerIndex": 1,
+      "explanation": "5 percent of 1,050 dollars is 52.50 dollars."
+    },
+    {
+      "id": "seed-compound-interest-quiz-2",
+      "bankId": "seed-compound-interest",
+      "topic": "Time and rate",
+      "question": "Using the rule of 72, about how long does money take to double at 6 percent?",
+      "options": [
+        "About 12 years",
+        "About 6 years",
+        "About 72 years"
+      ],
+      "answerIndex": 0,
+      "explanation": "72 divided by 6 is 12."
+    },
+    {
+      "id": "seed-compound-interest-quiz-3",
+      "bankId": "seed-compound-interest",
+      "topic": "Time and rate",
+      "question": "What happens to unpaid interest on debt?",
+      "options": [
+        "It expires",
+        "It is paid by the lender",
+        "It is added to what you owe"
+      ],
+      "answerIndex": 2,
+      "explanation": "Unpaid interest is added to what you owe."
+    }
+  ],
+  "generation": null
+}
