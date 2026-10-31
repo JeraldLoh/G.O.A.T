@@ -1,137 +1,106 @@
 "use client";
 
-import { Check } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { feedContent, percentDone, tally, tallyByTopic, useBank } from "@/lib/course";
-import { resetProgress, useProgress } from "@/lib/local";
-import type { BankSummary } from "@/lib/schemas";
+import { History, Sprout, TreePine, Trophy } from "lucide-react";
+import { StatsPanel } from "@/components/discovery/StatsPanel";
+import { useBrowserValue } from "@/components/discovery/storage";
+import { percentDone, useBankTally } from "@/lib/course";
+import { useProgress } from "@/lib/local";
+import { readHistory, type HistoryItem } from "@/components/explore/history";
+import { formatUploadDate } from "@/components/upload/workspace";
 
-// Lane B2. Per-bank and per-topic progress, quiz score, reset. All from kb:progress.
-export default function ProgressPage() {
+export default function LearningPage() {
   const progress = useProgress();
-  const [banks, setBanks] = useState<BankSummary[] | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/banks")
-      .then((response) => {
-        if (!response.ok) throw new Error(`Banks request failed: ${response.status}`);
-        return response.json();
-      })
-      .then(setBanks)
-      .catch(() => setFailed(true));
-  }, []);
-
-  const started = progress.seen.length > 0 || Object.keys(progress.quiz).length > 0;
-  const answered = Object.values(progress.quiz);
+  const history = useBrowserValue(readHistory, ["kb:history"]) ?? [];
+  const count = progress.seen.length;
+  const tier =
+    count >= 25
+      ? { title: "Knowledge explorer", icon: Trophy, goal: 50, color: "bg-sunflower" }
+      : count >= 10
+        ? { title: "Growing stronger", icon: TreePine, goal: 25, color: "bg-sage/40" }
+        : { title: "Curiosity takes root", icon: Sprout, goal: 10, color: "bg-cream" };
+  const Icon = tier.icon;
 
   return (
     <div className="h-full overflow-y-auto p-5">
-      <h1 className="text-2xl font-semibold">Your progress</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Saved on this device. No account needed.</p>
-
-      <dl className="mt-4 grid grid-cols-2 gap-2">
-        <div className="rounded-xl bg-card p-3">
-          <dt className="text-xs text-muted-foreground">Cards read</dt>
-          <dd className="text-2xl font-semibold tabular-nums">{progress.seen.length}</dd>
+      <h1 className="text-2xl font-semibold">My Learning</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Small discoveries. A growing you.</p>
+      <section className={`relative mt-5 overflow-hidden rounded-3xl p-5 ${tier.color}`}>
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold tracking-wide uppercase">Your learning card</span>
+          <Icon className="size-10 text-olive-deep" aria-hidden />
         </div>
-        <div className="rounded-xl bg-card p-3">
-          <dt className="text-xs text-muted-foreground">Quiz score</dt>
-          <dd className="text-2xl font-semibold tabular-nums">
-            {answered.filter(Boolean).length} / {answered.length}
-          </dd>
+        <h2 className="mt-3 text-xl font-semibold">{tier.title}</h2>
+        <p className="mt-1 text-sm">
+          {count === 0 ? "Your first discovery is waiting." : `${count} cards explored. Look how far you’ve come.`}
+        </p>
+        <p className="mt-5 text-xs font-medium">
+          {count >= 50 ? "You’ve earned your explorer card. Keep discovering!" : `${tier.goal - count} more cards until your next milestone`}
+        </p>
+        <progress
+          aria-label="Cards read toward next milestone"
+          value={Math.min(count, tier.goal)}
+          max={tier.goal}
+          className="mt-2 h-2 w-full accent-olive-deep"
+        />
+        <p className="mt-2 text-[11px] text-olive-deep">Seedling 0 · Growing 10 · Explorer 25 · 50-card milestone</p>
+      </section>
+
+      <section className="mt-6">
+        <h2 className="flex items-center gap-2 font-semibold">
+          <History className="size-4" aria-hidden />
+          Recently viewed
+        </h2>
+        <p className="mt-1 text-xs text-muted-foreground">Your learning trail, newest first. Tap to pick up where you left off.</p>
+        {history.length === 0 && (
+          <div className="mt-3 rounded-2xl border border-dashed p-4">
+            <p className="text-sm text-muted-foreground">Every discovery starts somewhere. Open a learning bank and it will appear here.</p>
+            <Link href="/" className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground">
+              Find something to learn →
+            </Link>
+          </div>
+        )}
+        {history.map((item) => (
+          <HistoryCard key={item.bankId} item={item} />
+        ))}
+      </section>
+
+      <details className="mt-6 rounded-2xl border">
+        <summary className="cursor-pointer p-4 text-sm font-semibold">Community stats & learning costs</summary>
+        <div className="h-[560px] max-h-[70dvh]">
+          <StatsPanel />
         </div>
-      </dl>
-
-      {!started && (
-        <div className="mt-6 rounded-xl border border-dashed p-6 text-center">
-          <p className="font-medium">Start swiping to track progress</p>
-          <Link href="/" className="mt-2 inline-block text-sm font-medium text-olive-deep underline underline-offset-4">
-            Go to the feed
-          </Link>
-        </div>
-      )}
-
-      <h2 className="mt-6 text-sm font-semibold tracking-wide text-muted-foreground uppercase">Banks</h2>
-      {failed && <p className="mt-2 text-sm text-brick">Could not load banks.</p>}
-      {!failed && banks === null && <p className="mt-2 text-sm">Loading…</p>}
-      {banks?.length === 0 && <p className="mt-2 text-sm">No banks yet.</p>}
-      <ul className="mt-2 flex flex-col gap-3">
-        {banks?.map((bank) => <BankRow key={bank.id} bank={bank} />)}
-      </ul>
-
-      {started && (
-        <button
-          type="button"
-          onClick={() => {
-            if (window.confirm("Reset all progress on this device?")) resetProgress();
-          }}
-          className="mt-6 mb-2 text-sm font-medium text-brick underline underline-offset-4"
-        >
-          Reset progress
-        </button>
-      )}
+      </details>
+      <p className="mt-4 text-xs text-muted-foreground">Your reading progress stays on this device.</p>
     </div>
   );
 }
 
-function BankRow({ bank }: { bank: BankSummary }) {
-  const progress = useProgress();
-  const { detail, failed } = useBank(bank.id);
-  const content = detail ? feedContent(detail) : null;
-  const total = content ? tally(content.cards, content.quizzes, progress) : null;
-  const topics = content ? tallyByTopic(content.cards, content.quizzes, progress) : [];
-  const value = total ? percentDone(total) : 0;
-
+function HistoryCard({ item }: { item: HistoryItem }) {
+  const tallyForBank = useBankTally(item.bankId);
+  const percent = tallyForBank ? percentDone(tallyForBank) : null;
+  const unfinished = tallyForBank ? !tallyForBank.complete : true;
   return (
-    <li className="rounded-xl bg-card p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-semibold">{bank.title}</p>
-          <p className="text-xs text-muted-foreground capitalize">
-            {bank.subject} · {bank.level}
+    <Link href={`/learn/${encodeURIComponent(item.bankId)}`} className="mt-3 block rounded-2xl border p-4">
+      <p className="font-semibold">{item.title}</p>
+      <p className="mt-1 text-xs capitalize text-muted-foreground">{item.subject}</p>
+      {percent !== null && (
+        <div className="mt-3">
+          <div className="h-1.5 overflow-hidden rounded-full bg-khaki/40" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
+            <div className="h-full rounded-full bg-olive" style={{ width: `${percent}%` }} />
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {tallyForBank?.complete ? "Completed" : `${percent}% · ${tallyForBank?.done}/${tallyForBank?.total} items`}
           </p>
         </div>
-        {total?.complete ? (
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-sunflower px-2 py-0.5 text-xs font-semibold text-ink">
-            <Check className="size-3" aria-hidden /> Complete
-          </span>
-        ) : (
-          <span className="shrink-0 text-sm tabular-nums">{total ? `${value}%` : "…"}</span>
-        )}
-      </div>
-      <div
-        role="progressbar"
-        aria-label={`${bank.title} progress`}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={value}
-        className="mt-3 h-2 overflow-hidden rounded-full bg-khaki/40"
-      >
-        <div className="h-full rounded-full bg-olive transition-[width] duration-500" style={{ width: `${value}%` }} />
-      </div>
-      {failed && <p className="mt-2 text-xs text-brick">Could not load this bank.</p>}
-      {total && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          {total.cardsSeen}/{total.cardsTotal} cards · {total.quizzesCorrect}/{total.quizzesTotal} quiz correct
-        </p>
       )}
-      {topics.length > 1 && (
-        <ul className="mt-3 flex flex-col gap-1 border-t pt-3">
-          {topics.map((topic) => (
-            <li key={topic.topic} className="flex items-center justify-between gap-2 text-sm">
-              <span className="flex min-w-0 items-center gap-1.5">
-                {topic.complete && <Check className="size-3.5 shrink-0 text-olive-deep" aria-label="Topic complete" />}
-                <span className="truncate">{topic.topic}</span>
-              </span>
-              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                {topic.done} / {topic.total}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </li>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Last viewed {formatUploadDate(item.viewedAt)}
+        {item.visits && item.visits > 1 ? ` · opened ${item.visits} times` : ""}
+      </p>
+      <span className="mt-3 inline-block text-sm font-semibold text-olive-deep">
+        {unfinished ? "Continue learning →" : "Review again →"}
+      </span>
+    </Link>
   );
 }

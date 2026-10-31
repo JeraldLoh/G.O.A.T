@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, CircleAlert, FileText, LoaderCircle, Upload, X } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { LEVEL_ICON, OptionChip } from "@/components/discovery/Chip";
 import { LEVEL_LABEL, SUBJECT_META } from "@/components/discovery/subjects";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,9 @@ import {
   type License,
 } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
+import type { UploadDraft } from "@/components/upload/workspace";
+import { SourcePreview } from "@/components/upload/SourcePreview";
+import { saveSourceFile } from "@/components/upload/sourceFiles";
 
 // Text files are sent as-is, so they stay small. PDFs are read in the browser and
 // only their text is sent, so a bigger file is fine.
@@ -35,7 +38,7 @@ export const LICENSE_LABEL: Record<License, string> = {
 /** Licenses whose terms require crediting the author. */
 const NEEDS_ATTRIBUTION: License[] = ["CC-BY-4.0", "CC-BY-SA-4.0", "CC-BY-NC-SA-4.0"];
 
-export type UploadRequest = { body: BodyInit; headers?: HeadersInit; title: string };
+export type UploadRequest = { body: BodyInit; headers?: HeadersInit; title: string; sourceFileId?: string; fileName?: string };
 
 const countWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
@@ -46,21 +49,24 @@ const countWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).le
  * unpdf), so the word count and limit apply to PDFs too and the request is
  * always JSON text.
  */
-export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest) => void }) {
+export function BankUploadForm({ onSubmit, draft, onSaveDraft, onExit }: { onSubmit: (request: UploadRequest) => void; draft?: UploadDraft; onSaveDraft?: (draft: UploadDraft) => void; onExit?: () => void }) {
   const id = useId();
   const fileInput = useRef<HTMLInputElement>(null);
+  const formPane = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<1 | 2>(1);
   const [file, setFile] = useState<File | null>(null);
   const [fileText, setFileText] = useState<string | null>(null); // the file's text, PDFs included
+  const [sourceFileId, setSourceFileId] = useState(draft?.sourceFileId);
+  const [fileName, setFileName] = useState(draft?.fileName);
   const [reading, setReading] = useState(false);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(draft?.text ?? "");
   const [dragging, setDragging] = useState(false);
-  const [title, setTitle] = useState("");
-  const [level, setLevel] = useState<Level>("beginner");
-  const [tags, setTags] = useState<string[]>([]);
-  const [license, setLicense] = useState<License>("CC-BY-4.0");
-  const [attribution, setAttribution] = useState("");
-  const [sourceUrl, setSourceUrl] = useState("");
+  const [title, setTitle] = useState(draft?.title ?? "");
+  const [level, setLevel] = useState<Level>(draft?.level ?? "beginner");
+  const [tags, setTags] = useState<string[]>(draft?.tags ?? []);
+  const [license, setLicense] = useState<License>(draft?.license ?? "CC-BY-4.0");
+  const [attribution, setAttribution] = useState(draft?.attribution ?? "");
+  const [sourceUrl, setSourceUrl] = useState(draft?.sourceUrl ?? "");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -72,6 +78,19 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
   const subject = guessSubject(title, tags);
   const SubjectIcon = SUBJECT_META[subject].icon;
   const needsAttribution = NEEDS_ATTRIBUTION.includes(license);
+  function saveDraft() {
+    onSaveDraft?.({ id: draft?.id ?? crypto.randomUUID(), title, text: sourceText, level, tags, license, attribution, sourceUrl, sourceFileId, fileName });
+  }
+  useLayoutEffect(() => {
+    if (!detailsOpen) return;
+    const pane = formPane.current;
+    const section = document.getElementById(`${id}-sharing`);
+    if (pane && section) scrollWithinPane(pane, section);
+  }, [detailsOpen, id, needsAttribution]);
+  const draftButton = onSaveDraft && <Button type="button" variant="outline" disabled={reading || !hasSource} onClick={saveDraft}>Save draft</Button>;
+  const preview = hasSource && (
+    <SourcePreview text={sourceText} sourceFileId={sourceFileId} fileName={fileName} file={file} defaultOpen />
+  );
 
   async function pickFile(picked: File | undefined) {
     setErrors({});
@@ -91,6 +110,8 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
     }
     setFile(picked);
     setFileText(null);
+    setSourceFileId(undefined);
+    setFileName(picked.name);
     if (pdf) {
       setReading(true);
       try {
@@ -105,6 +126,13 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
           return;
         }
         setFileText(pdfText);
+        try {
+          const fileId = crypto.randomUUID();
+          await saveSourceFile(fileId, picked);
+          setSourceFileId(fileId);
+        } catch {
+          setErrors({ file: "PDF preview is available now, but this device could not retain the original file for later. Extracted text can still be saved." });
+        }
       } catch {
         setFile(null);
         setErrors({ file: "Couldn't read this PDF. Try another file or paste the text." });
@@ -125,6 +153,8 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
   function clearFile() {
     setFile(null);
     setFileText(null);
+    setSourceFileId(undefined);
+    setFileName(undefined);
     setErrors({});
     if (fileInput.current) fileInput.current.value = "";
   }
@@ -161,9 +191,8 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
     setErrors(found);
     if (found.attribution || found.sourceUrl) {
       setDetailsOpen(true);
-      // After the section opens, focus (and scroll to) the field that needs fixing.
       const field = found.attribution ? `${id}-attribution` : `${id}-url`;
-      setTimeout(() => document.getElementById(field)?.focus(), 0);
+      setTimeout(() => document.getElementById(field)?.focus({ preventScroll: true }), 0);
     }
     if (Object.keys(found).length > 0 || !parsed.success) return;
 
@@ -171,6 +200,8 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
       body: JSON.stringify(parsed.data),
       headers: { "Content-Type": "application/json" },
       title: parsed.data.title,
+      sourceFileId,
+      fileName,
     });
   }
 
@@ -200,7 +231,7 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
           pickFile(event.dataTransfer.files[0]);
         }}
       >
-        <FlowHeader label="Step 1 of 2" progress={0.25} />
+        <FlowHeader label="1. Choose material" progress={0.25} onExit={onExit} />
         <div className="flex-1 overflow-y-auto p-5">
           <h1 className="text-2xl font-semibold">Add your material</h1>
 
@@ -239,6 +270,8 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
                 value={text}
                 onChange={(event) => {
                   setText(event.target.value);
+                  setSourceFileId(undefined);
+                  setFileName(undefined);
                   setErrors({});
                 }}
                 rows={9}
@@ -265,6 +298,7 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
             </div>
           )}
           {fileInputEl}
+          {preview}
           {(errors.text || errors.file) && (
             <p
               role="alert"
@@ -277,9 +311,10 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
         </div>
 
         <div className="flex items-center gap-3 border-t bg-background p-4">
+          {draftButton}
           {words > 0 && !reading && (
             <span className={cn("text-sm text-muted-foreground tabular-nums", tooLong && "text-destructive")}>
-              {words.toLocaleString()} / {DEFAULT_MAX_WORDS.toLocaleString()} words
+              {words.toLocaleString()} words
             </span>
           )}
           <Button size="lg" className="ml-auto h-11 min-w-32 text-base" disabled={reading} onClick={goToDetails}>
@@ -298,9 +333,10 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
       noValidate
       className="flex h-full flex-col"
     >
-      <FlowHeader label="Step 2 of 2" progress={0.75} onBack={() => setStep(1)} />
-      <div className="flex-1 overflow-y-auto p-5">
+      <FlowHeader label="2. Review & submit" progress={0.75} onBack={() => setStep(1)} onExit={onExit} />
+      <div ref={formPane} className="min-h-0 flex-1 overflow-y-auto p-5 [overflow-anchor:none]">
         <h1 className="text-2xl font-semibold">Describe it</h1>
+        {preview}
         <p className="mt-2 flex min-w-0 items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm">
           <FileText aria-hidden className="size-4 shrink-0 text-olive-deep" />
           <span className="min-w-0 flex-1 truncate">{file ? file.name : "Pasted text"}</span>
@@ -346,7 +382,7 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
             </p>
           </Field>
 
-          <section className="rounded-2xl border">
+          <section id={`${id}-sharing`} className="rounded-2xl border">
             <button
               type="button"
               aria-expanded={detailsOpen}
@@ -412,13 +448,34 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
         </div>
       </div>
 
-      <div className="border-t bg-background p-4">
-        <Button type="submit" size="lg" className="h-11 w-full text-base">
-          Turn it into cards
+      <div className="flex gap-3 border-t bg-background p-4">
+        {draftButton}
+        <Button type="submit" size="lg" className="h-11 flex-1 text-base">
+          Submit for review
         </Button>
       </div>
     </form>
   );
+}
+
+/** Scroll only the form pane, and only as far as needed to keep `target` on screen. */
+function scrollWithinPane(pane: HTMLElement, target: HTMLElement) {
+  const paneRect = pane.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const pad = 12;
+  let delta = 0;
+  if (targetRect.height >= paneRect.height) {
+    delta = targetRect.top - paneRect.top - pad;
+  } else if (targetRect.bottom > paneRect.bottom - pad) {
+    delta = targetRect.bottom - paneRect.bottom + pad;
+  } else if (targetRect.top < paneRect.top + pad) {
+    delta = targetRect.top - paneRect.top - pad;
+  }
+  if (delta === 0) return;
+  pane.scrollBy({
+    top: delta,
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+  });
 }
 
 function inputClass(error?: string, extra?: string) {

@@ -1,112 +1,198 @@
 "use client";
 
-import { useState } from "react";
-import { notifyFiltersChanged } from "@/components/discovery/storage";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useBrowserValue } from "@/components/discovery/storage";
 import { BankUploadForm, type UploadRequest } from "@/components/upload/BankUploadForm";
-import { FlowHeader } from "@/components/upload/FlowHeader";
-import { GenerationView, type GenerationState } from "@/components/upload/GenerationView";
-import { errorMessage, readBankStream } from "@/components/upload/readBankStream";
-import { getFilters, getInterests, setFilters, setInterests } from "@/lib/local";
-import type { BankSummary } from "@/lib/schemas";
-
-/**
- * Loosen the uploader's own feed filters just enough that the new bank shows up
- * on "Open in feed": add its subject, and drop a level or tag filter it doesn't match.
- */
-function makeVisibleInFeed(bank: BankSummary) {
-  const interests = getInterests();
-  if (interests && !interests.includes(bank.subject)) {
-    setInterests([...interests, bank.subject]);
-  }
-  const filters = getFilters();
-  setFilters({
-    level: filters.level === bank.level ? filters.level : null,
-    tags: filters.tags.some((tag) => bank.tags.includes(tag)) ? filters.tags : [],
-  });
-  notifyFiltersChanged();
-}
+import { readWorkspace, saveWorkspace, deleteUpload, EMPTY_WORKSPACE, formatUploadDate, type UploadDraft } from "@/components/upload/workspace";
+import { SourcePreview } from "@/components/upload/SourcePreview";
 
 export default function UploadPage() {
-  const [state, setState] = useState<GenerationState | null>(null);
-  const [formKey, setFormKey] = useState(0);
+  return (
+    <Suspense fallback={<div className="p-5 text-sm text-muted-foreground">Opening uploads…</div>}>
+      <UploadWorkspace />
+    </Suspense>
+  );
+}
 
-  async function upload({ body, headers, title }: UploadRequest) {
-    const update = (patch: Partial<GenerationState>) =>
-      setState((current) => (current ? { ...current, ...patch } : current));
-    setState({
-      title,
-      status: "streaming",
-      bank: null,
-      progress: null,
-      cards: [],
-      quizzes: [],
-      generation: null,
-      error: null,
-    });
+function UploadWorkspace() {
+  const workspace = useBrowserValue(readWorkspace, ["kb:upload-workspace"]) ?? EMPTY_WORKSPACE;
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit");
+  const [selection, setEditing] = useState<UploadDraft | "new" | null>();
+  const editing =
+    selection === undefined
+      ? workspace.drafts.find((item) => item.id === editId) ?? workspace.submissions.find((item) => item.id === editId) ?? null
+      : selection;
+  const [message, setMessage] = useState("");
 
+  function save(draft: UploadDraft) {
+    const current = readWorkspace();
     try {
-      const response = await fetch("/api/banks", { method: "POST", body, headers });
-      if (!response.ok) {
-        update({ status: "error", error: await errorMessage(response) });
-        return;
-      }
-      let finished = false;
-      for await (const event of readBankStream(response)) {
-        switch (event.type) {
-          case "bank":
-            update({ bank: event.bank });
-            makeVisibleInFeed(event.bank);
-            break;
-          case "progress":
-            update({ progress: { message: event.message, done: event.done, total: event.total } });
-            break;
-          case "card":
-            setState((current) => current && { ...current, cards: [...current.cards, event.card] });
-            break;
-          case "quiz":
-            setState((current) => current && { ...current, quizzes: [...current.quizzes, event.quiz] });
-            break;
-          case "done":
-            finished = true;
-            update({ status: "done", generation: event.generation });
-            break;
-          case "error":
-            finished = true;
-            update({ status: "error", error: event.message });
-            break;
-        }
-      }
-      if (!finished) {
-        update({ status: "error", error: "The connection closed before generation finished." });
-      }
+      saveWorkspace({
+        ...current,
+        drafts: [...current.drafts.filter((item) => item.id !== draft.id), { ...draft, updatedAt: new Date().toISOString() }],
+      });
+      setEditing(null);
+      setMessage("Draft saved on this device. Pick it up whenever you’re ready.");
     } catch {
-      update({ status: "error", error: "Couldn't reach the server. Check your connection and try again." });
+      setMessage("Could not save. Device storage may be full. Keep this page open and copy your text.");
     }
   }
 
-  return (
-    <div className="h-full">
-      {state && (
-        <div className="flex h-full flex-col">
-          <FlowHeader
-            label={state.status === "streaming" ? "Making cards" : state.status === "done" ? "Done" : "Upload"}
-            progress={state.status === "streaming" ? 0.9 : 1}
+  function remove(id: string, title: string, kind: "draft" | "upload") {
+    const label = title.trim() || (kind === "draft" ? "this draft" : "this upload");
+    if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
+    try {
+      deleteUpload(id);
+      setMessage(kind === "draft" ? "Draft deleted from this device." : "Upload deleted from this device.");
+    } catch {
+      setMessage("Could not delete this item.");
+    }
+  }
+
+  function submit(request: UploadRequest) {
+    const current = readWorkspace();
+    const fields = JSON.parse(String(request.body));
+    const id = editing && editing !== "new" ? editing.id : crypto.randomUUID();
+    const previous = current.submissions.find((item) => item.id === id);
+    const now = new Date().toISOString();
+    try {
+      saveWorkspace({
+        drafts: current.drafts.filter((item) => item.id !== id),
+        submissions: [
+          ...current.submissions.filter((item) => item.id !== id),
+          {
+            ...fields,
+            id,
+            sourceFileId: request.sourceFileId,
+            fileName: request.fileName,
+            status: "Pending approval",
+            submittedAt: previous?.submittedAt ?? now,
+            updatedAt: previous ? now : undefined,
+            views: previous?.views ?? 0,
+          },
+        ],
+      });
+      setEditing(null);
+      setMessage("Saved as Pending approval on this device. It is not published. Community review is not connected yet.");
+    } catch {
+      setMessage("Could not save your submission. Your text is still in the form.");
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="flex h-full flex-col">
+        {message && <p role="status" className="bg-cream p-3 text-sm">{message}</p>}
+        <div className="min-h-0 flex-1">
+          <BankUploadForm
+            draft={editing === "new" ? undefined : editing}
+            onSubmit={submit}
+            onSaveDraft={save}
+            onExit={() => {
+              if (window.confirm("Leave this form? Save a draft first if you want to keep your changes.")) {
+                setEditing(null);
+                setMessage("");
+              }
+            }}
           />
-          <div className="flex-1 overflow-y-auto p-5">
-            <GenerationView
-              state={state}
-              onReset={() => {
-                if (state.status === "done") setFormKey((key) => key + 1); // fresh form after a success
-                setState(null);
-              }}
-            />
-          </div>
         </div>
-      )}
-      {/* Hidden, not unmounted, so "Back to the form" keeps what was typed. */}
-      <div hidden={state !== null} className="h-full">
-        <BankUploadForm key={formKey} onSubmit={upload} />
       </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-y-auto p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">Your uploads</h1>
+        <button
+          onClick={() => {
+            setEditing("new");
+            setMessage("");
+          }}
+          className="min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"
+        >
+          + Add material
+        </button>
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">A place for what you know. Saved on this device.</p>
+      {message && <p role="status" className="mt-4 rounded-xl bg-cream p-3 text-sm">{message}</p>}
+
+      <section className="mt-6">
+        <h2 className="font-semibold">
+          Drafts <span className="text-sm text-muted-foreground">({workspace.drafts.length})</span>
+        </h2>
+        <p className="mt-1 text-xs text-muted-foreground">Private and editable. Not submitted. No item limit.</p>
+        {workspace.drafts.length === 0 && (
+          <p className="mt-3 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+            Ideas can take their time. Your drafts will appear here.
+          </p>
+        )}
+        {workspace.drafts.map((draft) => (
+          <article key={draft.id} className="mt-3 rounded-xl border p-4">
+            <p className="truncate font-medium">{draft.title || "Untitled draft"}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Last edited {formatUploadDate(draft.updatedAt)}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  setEditing(draft);
+                  setMessage("");
+                }}
+                className="min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"
+              >
+                Continue →
+              </button>
+              <button
+                onClick={() => remove(draft.id, draft.title, "draft")}
+                className="min-h-11 rounded-xl border border-brick/40 px-4 text-sm font-semibold text-brick"
+              >
+                Delete
+              </button>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="mt-6">
+        <h2 className="font-semibold">
+          Submitted <span className="text-sm text-muted-foreground">({workspace.submissions.length})</span>
+        </h2>
+        <p className="mt-1 text-xs text-muted-foreground">Editable after submit. No item limit.</p>
+        <p className="mt-2 rounded-xl bg-muted p-3 text-xs leading-relaxed">
+          Review statuses: Approved · Pending approval · Rejected. Safety review is not connected yet, so new submissions stay pending on this device and are not shared.
+        </p>
+        {workspace.submissions.length === 0 && <p className="mt-3 text-sm text-muted-foreground">No submissions yet.</p>}
+        {workspace.submissions.map((item) => (
+          <article key={item.id} className="mt-3 rounded-xl border p-4">
+            <h3 className="font-medium">{item.title}</h3>
+            <span className="mt-1 inline-block rounded-full bg-cream px-2 py-1 text-xs">{item.status}</span>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Uploaded {formatUploadDate(item.submittedAt)}
+              {item.updatedAt ? ` · Last edited ${formatUploadDate(item.updatedAt)}` : ""} · {item.license}
+            </p>
+            <p className="mt-2 text-sm font-semibold">{(item.views ?? 0).toLocaleString()} audience views</p>
+            <SourcePreview text={item.text} sourceFileId={item.sourceFileId} fileName={item.fileName} />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  setEditing(item);
+                  setMessage("");
+                }}
+                className="min-h-11 rounded-xl border-2 border-primary px-4 text-sm font-semibold text-olive-deep"
+              >
+                Edit submission →
+              </button>
+              <button
+                onClick={() => remove(item.id, item.title, "upload")}
+                className="min-h-11 rounded-xl border border-brick/40 px-4 text-sm font-semibold text-brick"
+              >
+                Delete
+              </button>
+            </div>
+          </article>
+        ))}
+      </section>
     </div>
   );
 }

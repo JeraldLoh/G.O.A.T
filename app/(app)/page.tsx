@@ -1,133 +1,89 @@
 "use client";
 
+import { ArrowUp, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { FilterBar } from "@/components/discovery/FilterBar";
 import { InterestGate } from "@/components/discovery/InterestGate";
-import { RatingButtons } from "@/components/discovery/RatingButtons";
-import { CompletionScreen } from "@/components/feed/CompletionScreen";
-import { FeedItem } from "@/components/feed/FeedItem";
-import { getFilters, getInterests, onLocalChange } from "@/lib/local";
-import type { BankSummary, FeedEntry } from "@/lib/schemas";
+import { useFeedQuery } from "@/components/discovery/useFeedQuery";
+import { BankPreview } from "@/components/explore/BankPreview";
+import { groupBanks } from "@/components/explore/content";
+import type { FeedEntry } from "@/lib/schemas";
 
-type Slot =
-  | { key: string; kind: "entry"; entry: FeedEntry }
-  | { key: string; kind: "complete"; bank: BankSummary };
-
-/** Builds /api/feed?subjects=…&tags=…&level=… from kb:interests and kb:filters. */
-function feedQuery(): string {
-  const params = new URLSearchParams();
-  const interests = getInterests();
-  const { tags, level } = getFilters();
-  if (interests?.length) params.set("subjects", interests.join(","));
-  if (tags.length) params.set("tags", tags.join(","));
-  if (level) params.set("level", level);
-  return params.toString();
-}
-
-function subscribeToChoices(onChange: () => void): () => void {
-  const offInterests = onLocalChange("kb:interests", onChange);
-  const offFilters = onLocalChange("kb:filters", onChange);
-  return () => {
-    offInterests();
-    offFilters();
-  };
-}
-
-/** Feed entries plus one completion slot after each bank's last entry. */
-function toSlots(entries: FeedEntry[]): Slot[] {
-  const slots: Slot[] = [];
-  entries.forEach((entry, index) => {
-    const id = entry.kind === "card" ? entry.card.id : entry.quiz.id;
-    slots.push({ key: `${entry.kind}-${id}`, kind: "entry", entry });
-    if (entries[index + 1]?.bank.id !== entry.bank.id) {
-      slots.push({ key: `complete-${entry.bank.id}`, kind: "complete", bank: entry.bank });
-    }
-  });
-  return slots;
-}
-
-// Lane B1. The swipe feed: one full-height snap slot per card, quiz or completion screen.
-export default function FeedPage() {
-  // Re-queries when InterestGate or FilterBar (Lane C) write new choices. null during server render.
-  const query = useSyncExternalStore(subscribeToChoices, feedQuery, () => null);
+export default function ExplorePage() {
+  const query = useFeedQuery();
   const [attempt, setAttempt] = useState(0);
-  // The result is tagged with the request it answers, so a new query shows "Loading" again.
   const request = query === null ? null : `${query}#${attempt}`;
   const [result, setResult] = useState<{ request: string; entries: FeedEntry[] | null } | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const current = result?.request === request ? result : null;
+  const entries = current?.entries;
+  const failed = current !== null && entries === null;
+  const banks = entries ? groupBanks(entries) : [];
+  const scrollKey = `kb:explore-scroll:${query ?? ""}`;
 
   useEffect(() => {
     if (query === null || request === null) return;
-    let active = true;
-    fetch(`/api/feed${query ? `?${query}` : ""}`)
+    const controller = new AbortController();
+    fetch(`/api/feed${query ? `?${query}` : ""}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error(`Feed request failed: ${response.status}`);
-        return response.json();
+        return response.json() as Promise<FeedEntry[]>;
       })
-      .then((data: FeedEntry[]) => active && setResult({ request, entries: data }))
-      .catch(() => active && setResult({ request, entries: null }));
-    return () => {
-      active = false;
-    };
+      .then((data) => setResult({ request, entries: data }))
+      .catch(() => {
+        if (!controller.signal.aborted) setResult({ request, entries: null });
+      });
+    return () => controller.abort();
   }, [query, request]);
 
-  const current = result?.request === request ? result : null;
-  const entries = current?.entries ?? null;
-  const failed = current !== null && current.entries === null;
-  const slots = entries ? toSlots(entries) : [];
+  useLayoutEffect(() => {
+    if (!entries || !scrollRef.current) return;
+    try {
+      scrollRef.current.scrollTop = Number(sessionStorage.getItem(scrollKey)) || 0;
+    } catch {
+      // Explore still works when browser storage is unavailable.
+    }
+  }, [entries, scrollKey]);
 
   return (
     <InterestGate>
       <div className="flex h-full flex-col">
+        <header className="flex items-center justify-between px-5 pt-4 pb-3">
+          <div>
+            <p className="text-[10px] font-bold tracking-[0.22em] text-olive-deep uppercase">G.O.A.T / Open learning</p>
+            <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">Explore</h1>
+          </div>
+          <span className="flex size-10 items-center justify-center rounded-full bg-sunflower"><Sparkles className="size-5" aria-hidden /></span>
+        </header>
         <FilterBar />
-        <div className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-scroll overscroll-contain">
-          {failed && (
-            <Message title="Could not load the feed" body="Check your connection and try again.">
-              <button
-                type="button"
-                onClick={() => setAttempt((n) => n + 1)}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
-              >
-                Retry
-              </button>
+        <div ref={scrollRef} aria-label="Explore learning banks" tabIndex={0}
+          onScroll={(event) => {
+            try { sessionStorage.setItem(scrollKey, String(event.currentTarget.scrollTop)); } catch { /* Optional convenience. */ }
+          }}
+          className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain focus-visible:outline-2 focus-visible:outline-ring">
+          {failed ? (
+            <Message title="Could not load Explore" body="Check your connection and try again.">
+              <button type="button" onClick={() => setAttempt((n) => n + 1)} className="rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground">Retry</button>
             </Message>
-          )}
-          {!failed && entries === null && <Message title="Loading your feed…" />}
-          {!failed && entries?.length === 0 && (
-            <Message title="Nothing here yet" body="No banks match your interests and filters. Change them, or add the first bank.">
-              <Link href="/upload" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
-                Upload a bank
-              </Link>
+          ) : !entries ? (
+            <Message title="Finding your next discovery…" />
+          ) : banks.length === 0 ? (
+            <Message title="A little room for curiosity" body="No learning banks match these filters. Try another topic or share something worth learning.">
+              <Link href="/upload" className="rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground">Upload a bank</Link>
             </Message>
-          )}
-          {!failed &&
-            slots.map((slot) => (
-              <section key={slot.key} className="h-full snap-start snap-always">
-                {slot.kind === "entry" ? (
-                  <FeedItem entry={slot.entry} />
-                ) : (
-                  <div className="flex h-full flex-col">
-                    <div className="min-h-0 flex-1">
-                      <CompletionScreen bank={slot.bank} />
-                    </div>
-                    <div className="flex justify-center pb-4">
-                      <RatingButtons bankId={slot.bank.id} />
-                    </div>
-                  </div>
-                )}
-              </section>
-            ))}
-          {!failed && slots.length > 0 && (
-            <Message title="You're all caught up" body="That's every bank for your interests.">
-              <div className="flex gap-3">
-                <Link href="/progress" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
-                  See progress
-                </Link>
-                <Link href="/upload" className="rounded-lg border border-khaki px-4 py-2 text-sm font-semibold text-olive-deep">
-                  Add a bank
-                </Link>
-              </div>
-            </Message>
+          ) : (
+            <>
+              {banks.map((group, index) => (
+                <section key={group.bank.id} className="h-full snap-start snap-always overflow-y-auto" aria-label={group.bank.title}>
+                  <BankPreview group={group} index={index} total={banks.length} />
+                </section>
+              ))}
+              <Message title="A little wiser already?" body="Your next discovery could be something you share.">
+                <Link href="/upload" className="rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground">Share a learning bank</Link>
+                <button type="button" onClick={() => scrollRef.current?.scrollTo({ top: 0 })} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-olive-deep"><ArrowUp className="size-4" aria-hidden />Back to top</button>
+              </Message>
+            </>
           )}
         </div>
       </div>
@@ -136,11 +92,9 @@ export default function FeedPage() {
 }
 
 function Message({ title, body, children }: { title: string; body?: string; children?: React.ReactNode }) {
-  return (
-    <section className="flex h-full snap-start flex-col items-center justify-center gap-3 p-6 text-center">
-      <h2 className="text-xl font-semibold">{title}</h2>
-      {body && <p className="max-w-xs text-sm text-muted-foreground">{body}</p>}
-      {children}
-    </section>
-  );
+  return <section className="flex h-full snap-start flex-col items-center justify-center gap-4 p-6 text-center" role="status">
+    <h2 className="text-xl font-semibold">{title}</h2>
+    {body && <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">{body}</p>}
+    {children}
+  </section>;
 }

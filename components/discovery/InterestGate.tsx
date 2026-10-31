@@ -75,7 +75,7 @@ function InterestPicker({ onDone }: { onDone: (subjects: Subject[]) => void }) {
                 aria-pressed={on}
                 onClick={() => toggle(subject)}
                 className={cn(
-                  "relative flex min-h-24 flex-col justify-between rounded-2xl border-2 p-3.5 text-left transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "relative flex min-h-16 flex-row items-center gap-2 rounded-xl border-2 p-3 text-left transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                   on ? "border-olive-deep bg-cream" : "border-border bg-background hover:bg-muted",
                   counts && count === 0 && !on && "border-dashed opacity-70",
                 )}

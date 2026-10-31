@@ -1,28 +1,27 @@
 "use client";
 
-import { BarChart3, Layers, Trophy, Upload } from "lucide-react";
+import { UserRound, Compass, Trophy, Upload } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { href: "/", label: "Feed", icon: Layers },
+  { href: "/", label: "Explore", icon: Compass },
   { href: "/upload", label: "Upload", icon: Upload },
-  { href: "/progress", label: "Progress", icon: Trophy },
-  { href: "/stats", label: "Stats", icon: BarChart3 },
+  { href: "/progress", label: "My Learning", icon: Trophy },
+  { href: "/profile", label: "Profile", icon: UserRound },
 ];
-
-/** Routes that run as a full-screen flow with their own exit, so the tab bar steps aside. */
-const FULL_SCREEN = ["/upload"];
 
 export function TabBar() {
   const pathname = usePathname();
-  if (FULL_SCREEN.includes(pathname)) return null;
 
   return (
     <nav className="grid grid-cols-4 border-t bg-background pb-[env(safe-area-inset-bottom)]">
       {TABS.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href;
+        const active =
+          href === "/"
+            ? pathname === "/" || pathname.startsWith("/learn/")
+            : pathname === href || pathname.startsWith(`${href}/`);
         return (
           <Link
             key={href}
@@ -33,7 +32,6 @@ export function TabBar() {
               active && "font-semibold text-foreground",
             )}
           >
-            {/* Active tab: a filled pill behind the icon, like native tab bars. */}
             <span
               className={cn(
                 "flex h-8 w-14 items-center justify-center rounded-full transition-colors",

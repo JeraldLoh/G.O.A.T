@@ -1,8 +1,6 @@
 import { Toaster } from "@/components/discovery/Toaster";
 import { TabBar } from "@/components/shell/TabBar";
 
-// The license line lives on the Stats page (and README) rather than above the
-// tab bar on every screen.
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative mx-auto flex h-dvh max-w-[430px] flex-col bg-background pt-[env(safe-area-inset-top)] shadow-sm">
