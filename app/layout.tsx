@@ -9,6 +9,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Draw under the notch / home indicator; the shell pads with safe-area insets.
+  viewportFit: "cover",
+  // Shrink the page when the keyboard opens, so bottom action bars stay visible.
+  interactiveWidget: "resizes-content",
+  themeColor: "#fbf6ea",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

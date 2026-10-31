@@ -86,7 +86,8 @@
   --secondary: var(--color-sage);
   --secondary-foreground: var(--color-ink);
   --muted: var(--color-linen);
-  --muted-foreground: var(--color-bark);
+  /* olive-deep, not bark: brown hint text read like the brick error color */
+  --muted-foreground: var(--color-olive-deep);
   --accent: var(--color-sunflower);
   --accent-foreground: var(--color-ink);
   --destructive: var(--color-brick);
@@ -152,5 +153,36 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* Feel like an app, not a web page. */
+  html,
+  body {
+    overscroll-behavior: none; /* no rubber-band bounce of the whole page */
+  }
+  button,
+  a,
+  summary,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent; /* no grey flash on tap */
+    touch-action: manipulation;
+  }
+  /* Press-down feedback the moment a control is touched. */
+  button:not(:disabled),
+  summary {
+    transition-property: transform, background-color, border-color, color, opacity;
+    transition-duration: 120ms;
+  }
+  button:not(:disabled):active,
+  summary:active,
+  .press:active {
+    transform: scale(0.97);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    button:not(:disabled):active,
+    summary:active,
+    .press:active {
+      transform: none;
+    }
   }
 }

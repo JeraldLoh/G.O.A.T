@@ -116,7 +116,7 @@ Added colors (the base palette has no text color, no page background and no erro
 | linen | `#F3E8CF` | Muted surfaces (`--muted`): area outside the phone column, inactive tabs, skeletons |
 | olive-deep | `#5C6146` | Text-sized olive: links, "correct" quiz feedback, source link (6.0:1 on `paper`) |
 | brick | `#983D2A` | Errors and "wrong answer" quiz feedback (6.4:1 on `paper`, 5.1:1 on `cream`) |
-| bark | `#7A5038` | Muted text (`--muted-foreground`), text-sized terracotta/brown (6.4:1 on `paper`, 5.1:1 on `cream`) |
+| bark | `#7A5038` | Text-sized terracotta/brown (6.4:1 on `paper`, 5.1:1 on `cream`) |
 | night | `#23241B` | Dark-mode background (`paper` text on it is 14.5:1) |
 
 Accessibility rules (WCAG AA, contrast checked):
@@ -124,7 +124,7 @@ Accessibility rules (WCAG AA, contrast checked):
 - Base colors are for fills, borders and large shapes. On those fills, text is `ink` (passes on everything from `sage` to `sunflower`) — except on `olive`, where `paper` text is only about 4:1, so primary buttons use `olive-deep` (6.0:1).
 - Do not signal quiz right/wrong by color alone: add a ✓ / ✗ icon and the words "Correct" / "Not quite".
 
-shadcn token mapping (light): `--background: paper`, `--foreground: ink`, `--card: cream`, `--card-foreground: ink`, `--primary: olive-deep`, `--primary-foreground: paper`, `--secondary: sage`, `--secondary-foreground: ink`, `--muted: linen`, `--muted-foreground: bark`, `--accent: sunflower`, `--accent-foreground: ink`, `--destructive: brick`, `--border: khaki`, `--input: khaki`, `--ring: sunflower`.
+shadcn token mapping (light): `--background: paper`, `--foreground: ink`, `--card: cream`, `--card-foreground: ink`, `--primary: olive-deep`, `--primary-foreground: paper`, `--secondary: sage`, `--secondary-foreground: ink`, `--muted: linen`, `--muted-foreground: olive-deep` (not bark: brown hints looked like brick errors), `--accent: sunflower`, `--accent-foreground: ink`, `--destructive: brick`, `--border: khaki`, `--input: khaki`, `--ring: sunflower`.
 Dark mode (`.dark` class, optional): `--background: night`, `--foreground: paper`, `--card: ink`, `--primary: sunflower`, `--primary-foreground: ink`, `--muted-foreground: khaki`, `--destructive: #E08A6E`.
 Implemented in `app/globals.css`; every palette color is also a Tailwind color (`bg-sunflower`, `text-olive-deep`, `border-khaki`).
 
