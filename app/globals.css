@@ -154,4 +154,35 @@
   html {
     @apply font-sans;
   }
+
+  /* Feel like an app, not a web page. */
+  html,
+  body {
+    overscroll-behavior: none; /* no rubber-band bounce of the whole page */
+  }
+  button,
+  a,
+  summary,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent; /* no grey flash on tap */
+    touch-action: manipulation;
+  }
+  /* Press-down feedback the moment a control is touched. */
+  button:not(:disabled),
+  summary {
+    transition-property: transform, background-color, border-color, color, opacity;
+    transition-duration: 120ms;
+  }
+  button:not(:disabled):active,
+  summary:active,
+  .press:active {
+    transform: scale(0.97);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    button:not(:disabled):active,
+    summary:active,
+    .press:active {
+      transform: none;
+    }
+  }
 }

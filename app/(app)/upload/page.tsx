@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { notifyFiltersChanged } from "@/components/discovery/storage";
 import { BankUploadForm, type UploadRequest } from "@/components/upload/BankUploadForm";
+import { FlowHeader } from "@/components/upload/FlowHeader";
 import { GenerationView, type GenerationState } from "@/components/upload/GenerationView";
 import { errorMessage, readBankStream } from "@/components/upload/readBankStream";
 import { getFilters, getInterests, setFilters, setInterests } from "@/lib/local";
@@ -86,14 +87,20 @@ export default function UploadPage() {
   return (
     <div className="h-full">
       {state && (
-        <div className="h-full overflow-y-auto p-5">
-          <GenerationView
-            state={state}
-            onReset={() => {
-              if (state.status === "done") setFormKey((key) => key + 1); // fresh form after a success
-              setState(null);
-            }}
+        <div className="flex h-full flex-col">
+          <FlowHeader
+            label={state.status === "streaming" ? "Making cards" : state.status === "done" ? "Done" : "Upload"}
+            progress={state.status === "streaming" ? 0.9 : 1}
           />
+          <div className="flex-1 overflow-y-auto p-5">
+            <GenerationView
+              state={state}
+              onReset={() => {
+                if (state.status === "done") setFormKey((key) => key + 1); // fresh form after a success
+                setState(null);
+              }}
+            />
+          </div>
         </div>
       )}
       {/* Hidden, not unmounted, so "Back to the form" keeps what was typed. */}

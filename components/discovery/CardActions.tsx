@@ -81,7 +81,7 @@ export function CardActions({
             {reported ? (
               <p className="flex min-h-12 items-center gap-2 text-sm text-muted-foreground">
                 <CircleCheck aria-hidden className="size-5 text-olive-deep" />
-                You reported this card. Thanks.
+                You&apos;ve reported this card
               </p>
             ) : (
               <button

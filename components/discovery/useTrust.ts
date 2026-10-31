@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { addFlagged, setMyRating, useFlagged, useMyRating } from "@/components/discovery/storage";
+import { toast } from "@/components/discovery/Toaster";
 import { getDeviceId } from "@/lib/local";
 
 export const REPORT_REASONS = [
@@ -30,6 +31,7 @@ export function useReport(cardId: string, onFlagged?: (flags: number) => void) {
       const { flags } = (await response.json()) as { flags: number };
       addFlagged(cardId);
       onFlagged?.(flags);
+      toast("Reported. Thanks!");
       return true;
     } catch {
       setError("Couldn't send the report. Try again.");
@@ -67,6 +69,7 @@ export function useRating(bankId: string, initialScore: number | null = null) {
       const result = (await response.json()) as { accuracyScore: number | null };
       setScore(result.accuracyScore);
       setMyRating(bankId, value);
+      toast("Thanks for rating!");
     } catch {
       setError(true);
     } finally {

@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, CircleAlert, FileText, LoaderCircle, Upload, X } from "lucide-react";
+import { ChevronDown, CircleAlert, FileText, LoaderCircle, Upload, X } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { LEVEL_ICON, OptionChip } from "@/components/discovery/Chip";
 import { LEVEL_LABEL, SUBJECT_META } from "@/components/discovery/subjects";
 import { Button } from "@/components/ui/button";
 import { guessSubject } from "@/components/upload/guessSubject";
+import { FlowHeader } from "@/components/upload/FlowHeader";
 import { TagInput } from "@/components/upload/TagInput";
 import {
   CreateBankRequestSchema,
@@ -77,7 +78,7 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
     if (!picked) return;
     const name = picked.name.toLowerCase();
     if (![".md", ".txt", ".pdf"].some((ext) => name.endsWith(ext))) {
-      setErrors({ text: "Use a .md, .txt or .pdf file." });
+      setErrors({ file: "Use a .md, .txt or .pdf file." });
       return;
     }
     const pdf = name.endsWith(".pdf");
@@ -85,7 +86,7 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
     if (picked.size > limit) {
       const mb = (picked.size / 1_000_000).toFixed(1);
       const kind = pdf ? "PDFs" : "Text files";
-      setErrors({ text: `${picked.name} is ${mb} MB. ${kind} must be under ${limit / 1_000_000} MB.` });
+      setErrors({ file: `${picked.name} is ${mb} MB. ${kind} must be under ${limit / 1_000_000} MB.` });
       return;
     }
     setFile(picked);
@@ -100,13 +101,13 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
         });
         if (!pdfText.trim()) {
           setFile(null);
-          setErrors({ text: "This PDF has no selectable text (it may be a scan). Try a text-based PDF." });
+          setErrors({ file: "This PDF has no selectable text (it may be a scan). Try a text-based PDF." });
           return;
         }
         setFileText(pdfText);
       } catch {
         setFile(null);
-        setErrors({ text: "Couldn't read this PDF. Try another file or paste the text." });
+        setErrors({ file: "Couldn't read this PDF. Try another file or paste the text." });
         return;
       } finally {
         setReading(false);
@@ -199,9 +200,9 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
           pickFile(event.dataTransfer.files[0]);
         }}
       >
+        <FlowHeader label="Step 1 of 2" progress={0.25} />
         <div className="flex-1 overflow-y-auto p-5">
-          <p className="text-sm font-medium text-olive-deep">Step 1 of 2</p>
-          <h1 className="mt-0.5 text-2xl font-semibold">Add your material</h1>
+          <h1 className="text-2xl font-semibold">Add your material</h1>
 
           {file ? (
             <div className="mt-5 flex items-center gap-3 rounded-2xl bg-card p-4">
@@ -254,7 +255,7 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
                 onClick={() => fileInput.current?.click()}
                 className={cn(
                   "flex min-h-20 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed px-4 py-3 transition-colors hover:bg-muted",
-                  dragging ? "border-olive-deep bg-cream" : "border-border",
+                  dragging ? "border-olive-deep bg-cream" : errors.file ? "border-destructive" : "border-border",
                 )}
               >
                 <Upload aria-hidden className="size-6 text-olive-deep" />
@@ -264,13 +265,13 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
             </div>
           )}
           {fileInputEl}
-          {errors.text && (
+          {(errors.text || errors.file) && (
             <p
               role="alert"
               className="mt-3 flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
             >
               <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
-              {errors.text}
+              {errors.text || errors.file}
             </p>
           )}
         </div>
@@ -297,19 +298,9 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
       noValidate
       className="flex h-full flex-col"
     >
+      <FlowHeader label="Step 2 of 2" progress={0.75} onBack={() => setStep(1)} />
       <div className="flex-1 overflow-y-auto p-5">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            aria-label="Back to step 1"
-            onClick={() => setStep(1)}
-            className="-ml-3 flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-muted"
-          >
-            <ArrowLeft aria-hidden className="size-5" />
-          </button>
-          <p className="shrink-0 text-sm font-medium whitespace-nowrap text-olive-deep">Step 2 of 2</p>
-        </div>
-        <h1 className="mt-1 text-2xl font-semibold">Describe it</h1>
+        <h1 className="text-2xl font-semibold">Describe it</h1>
         <p className="mt-2 flex min-w-0 items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm">
           <FileText aria-hidden className="size-4 shrink-0 text-olive-deep" />
           <span className="min-w-0 flex-1 truncate">{file ? file.name : "Pasted text"}</span>

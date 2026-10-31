@@ -195,6 +195,18 @@ export function StatsPanel() {
             </section>
           </div>
         </details>
+
+        <p className="text-center text-sm text-muted-foreground">
+          Free and open source under the{" "}
+          <a
+            href="https://github.com/JeraldLoh/G.O.A.T/blob/main/LICENSE"
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-olive-deep underline underline-offset-2"
+          >
+            MIT License
+          </a>
+        </p>
       </div>
     </div>
   );
