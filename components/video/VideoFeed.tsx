@@ -43,23 +43,16 @@ export function VideoFeed({
     scroller.current?.children[index]?.scrollIntoView({ behavior });
   }, []);
 
-  // Open at the requested chapter, then let scrolling decide which one plays.
   useEffect(() => {
     if (startIndex > 0) goTo(startIndex, "instant");
-
-    const element = scroller.current;
-    if (!element) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) setActive([...element.children].indexOf(entry.target));
-        }
-      },
-      { root: element, threshold: 0.6 },
-    );
-    for (const child of element.children) observer.observe(child);
-    return () => observer.disconnect();
   }, [startIndex, goTo]);
+
+  // Scroll position decides which chapter plays. It always names exactly one slot,
+  // and active === items.length (the end screen) plays nothing.
+  const onScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, clientHeight } = event.currentTarget;
+    if (clientHeight > 0) setActive(Math.round(scrollTop / clientHeight));
+  };
 
   const current: VideoItem | undefined = items[active];
   const bankItems = items.filter((item) => item.bank.id === current?.bank.id);
@@ -77,7 +70,11 @@ export function VideoFeed({
         </button>
       )}
 
-      <div ref={scroller} className="h-full snap-y snap-mandatory overflow-y-scroll overscroll-contain">
+      <div
+        ref={scroller}
+        onScroll={onScroll}
+        className="h-full snap-y snap-mandatory overflow-y-scroll overscroll-contain"
+      >
         {items.map((item, index) => (
           <ChapterSlide
             key={item.chapter.id}

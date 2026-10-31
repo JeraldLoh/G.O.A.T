@@ -12,6 +12,9 @@ const MIN_SCENE_MS = 3000;
 const SPEECH_RATE = 1.05;
 // How long to wait past the estimate for speech to finish before moving on anyway.
 const SPEECH_GRACE = 1.8;
+// Chrome can drop speech queued right after a cancel, and fast swipes would pile up
+// cancels, so speech only starts once a scene has stayed on screen this long.
+const SPEECH_DELAY_MS = 150;
 
 const BACKGROUNDS = [
   "from-olive-deep to-ink",
@@ -32,6 +35,7 @@ function useScenePlayback(scene: Scene, playing: boolean, muted: boolean, onDone
     const ms = sceneMs(scene);
     let finished = false;
     let timer: ReturnType<typeof setTimeout>;
+    let speakTimer: ReturnType<typeof setTimeout> | undefined;
     const finish = () => {
       if (finished) return;
       finished = true;
@@ -44,19 +48,25 @@ function useScenePlayback(scene: Scene, playing: boolean, muted: boolean, onDone
     } else {
       const utterance = new SpeechSynthesisUtterance(scene.narration);
       utterance.rate = SPEECH_RATE;
+      // The voice can take seconds to load, so the safety timer restarts when it begins.
+      utterance.onstart = () => {
+        clearTimeout(timer);
+        timer = setTimeout(finish, ms * SPEECH_GRACE);
+      };
       utterance.onend = finish;
       utterance.onerror = () => {
         clearTimeout(timer);
         timer = setTimeout(finish, ms);
       };
       speech.cancel();
-      speech.speak(utterance);
+      speakTimer = setTimeout(() => speech.speak(utterance), SPEECH_DELAY_MS);
       timer = setTimeout(finish, ms * SPEECH_GRACE);
     }
 
     return () => {
       finished = true;
       clearTimeout(timer);
+      clearTimeout(speakTimer);
       speech?.cancel();
     };
   }, [scene, playing, muted, onDone]);
