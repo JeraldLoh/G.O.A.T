@@ -43,6 +43,7 @@ const GeneratedChaptersSchema = z.object({
           caption: z.string().trim().min(1),
           narration: z.string().trim().min(1),
           emoji: z.string().trim().max(16),
+          videoQuery: z.string().trim().min(1),
         }),
       ),
     }),
@@ -138,8 +139,14 @@ const CHAPTERS_RESPONSE_SCHEMA = {
             type: "ARRAY",
             items: {
               type: "OBJECT",
-              required: ["cardRef", "caption", "narration", "emoji"],
-              properties: { cardRef: STRING, caption: STRING, narration: STRING, emoji: STRING },
+              required: ["cardRef", "caption", "narration", "emoji", "videoQuery"],
+              properties: {
+                cardRef: STRING,
+                caption: STRING,
+                narration: STRING,
+                emoji: STRING,
+                videoQuery: STRING,
+              },
             },
           },
         },
@@ -159,6 +166,7 @@ Rules:
 - "narration" is 1 or 2 spoken sentences, under 35 words, in plain conversational English. Open the first scene with a hook.
 - "caption" is the on-screen headline for the scene, at most 8 words.
 - "emoji" is one emoji that fits the scene.
+- "videoQuery" is 2 or 3 plain words to find a stock video clip behind the scene. Name something a camera can film, such as "ocean waves" or "stack of coins", not an abstract idea or a person. Use a different one for each scene.
 - State only facts found in that scene's card. Add nothing from your own knowledge, including examples, numbers or history.
 
 <cards>

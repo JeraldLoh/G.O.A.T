@@ -111,12 +111,24 @@ export const FlagSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
+/** A stock background clip. Decoration only: facts stay in the caption and narration. */
+export const StockVideoSchema = z.object({
+  url: z.string().url(),
+  poster: z.string(),
+  credit: z.string(),
+  pageUrl: z.string(),
+});
+
 /** One narrated screen of a video chapter. Grounded through cardId: it inherits that card's verified quote. */
 export const SceneSchema = z.object({
   cardId: z.string(),
   caption: z.string().min(1),
   narration: z.string().min(1),
   emoji: z.string().max(16),
+  /** Search term for a background clip. Absent on card-based chapters and older scripts. */
+  videoQuery: z.string().optional(),
+  /** null: searched, nothing usable. Absent: not searched yet. */
+  video: StockVideoSchema.nullable().optional(),
 });
 
 /** A video chapter: one topic of a bank, played as a sequence of scenes. */
@@ -233,6 +245,7 @@ export type Card = z.infer<typeof CardSchema>;
 export type Quiz = z.infer<typeof QuizSchema>;
 export type Generation = z.infer<typeof GenerationSchema>;
 export type Flag = z.infer<typeof FlagSchema>;
+export type StockVideo = z.infer<typeof StockVideoSchema>;
 export type Scene = z.infer<typeof SceneSchema>;
 export type Chapter = z.infer<typeof ChapterSchema>;
 export type VideoItem = z.infer<typeof VideoItemSchema>;

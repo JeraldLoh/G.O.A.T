@@ -29,7 +29,13 @@ function sceneMs(scene: Scene): number {
 }
 
 /** Speaks the scene with the device's voice, falling back to a timer so captions always advance. */
-function useScenePlayback(scene: Scene, playing: boolean, muted: boolean, onDone: () => void) {
+function useScenePlayback(
+  scene: Scene,
+  playing: boolean,
+  muted: boolean,
+  onDone: () => void,
+  onWord: (charIndex: number) => void,
+) {
   useEffect(() => {
     if (!playing) return;
     const ms = sceneMs(scene);
@@ -54,6 +60,10 @@ function useScenePlayback(scene: Scene, playing: boolean, muted: boolean, onDone
         timer = setTimeout(finish, ms * SPEECH_GRACE);
       };
       utterance.onend = finish;
+      // Not every voice reports word positions; the line just stays unhighlighted then.
+      utterance.onboundary = (event) => {
+        if (event.name === "word") onWord(event.charIndex);
+      };
       utterance.onerror = () => {
         clearTimeout(timer);
         timer = setTimeout(finish, ms);
@@ -69,7 +79,63 @@ function useScenePlayback(scene: Scene, playing: boolean, muted: boolean, onDone
       clearTimeout(speakTimer);
       speech?.cancel();
     };
-  }, [scene, playing, muted, onDone]);
+  }, [scene, playing, muted, onDone, onWord]);
+}
+
+/** The narration, with the word being spoken highlighted, like short-video captions. */
+function SpokenLine({ text, charIndex }: { text: string; charIndex: number | null }) {
+  return (
+    <span className="animate-in fade-in-0 text-lg leading-relaxed font-medium duration-700">
+      {[...text.matchAll(/\s+|\S+/g)].map(({ 0: part, index: start }) => {
+        const spoken =
+          charIndex !== null &&
+          part.trim() &&
+          charIndex >= start &&
+          charIndex < start + part.length;
+        return spoken ? (
+          <mark key={start} className="rounded bg-sunflower px-0.5 text-ink">
+            {part}
+          </mark>
+        ) : (
+          part
+        );
+      })}
+    </span>
+  );
+}
+
+/** The scene's stock clip behind a dark layer that keeps the text readable. */
+function SceneBackground({ scene, running }: { scene: Scene; running: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [failed, setFailed] = useState(false);
+  const video = scene.video;
+
+  useEffect(() => {
+    if (!ref.current) return;
+    if (running) ref.current.play().catch(() => {});
+    else ref.current.pause();
+  }, [running, video]);
+
+  if (!video || failed) return null;
+  return (
+    <>
+      {/* muted + playsInline is what lets phones autoplay it. */}
+      <video
+        key={video.url}
+        ref={ref}
+        src={video.url}
+        poster={video.poster}
+        muted
+        loop
+        playsInline
+        preload="auto"
+        onError={() => setFailed(true)}
+        aria-hidden
+        className="animate-in fade-in-0 absolute inset-0 size-full object-cover duration-500"
+      />
+      <div className="absolute inset-0 bg-ink/60" aria-hidden />
+    </>
+  );
 }
 
 function SceneBars({ count, index, ms, playing }: { count: number; index: number; ms: number; playing: boolean }) {
@@ -159,7 +225,15 @@ function Player({
     };
   });
   const [advance] = useState(() => () => onDone.current());
-  useScenePlayback(scene, running, muted, advance);
+  const [spoken, setSpoken] = useState<{ narration: string; charIndex: number } | null>(null);
+  const narration = useRef(scene.narration);
+  useEffect(() => {
+    narration.current = scene.narration;
+  });
+  const [onWord] = useState(() => (charIndex: number) => {
+    setSpoken({ narration: narration.current, charIndex });
+  });
+  useScenePlayback(scene, running, muted, advance, onWord);
 
   // Watching a scene counts as reading its card, so progress carries over to the feed.
   useEffect(() => {
@@ -169,11 +243,13 @@ function Player({
   return (
     <div
       className={cn(
-        "relative flex h-full flex-col bg-gradient-to-b text-cream",
+        "relative flex h-full flex-col overflow-hidden bg-gradient-to-b text-cream",
         BACKGROUNDS[chapter.order % BACKGROUNDS.length],
       )}
     >
-      <div className={cn("px-3 pt-[max(0.75rem,env(safe-area-inset-top))]", closable && "pl-14")}>
+      <SceneBackground scene={scene} running={running} />
+
+      <div className={cn("relative px-3 pt-[max(0.75rem,env(safe-area-inset-top))]", closable && "pl-14")}>
         <SceneBars count={chapter.scenes.length} index={index} ms={sceneMs(scene)} playing={running} />
         <p className="mt-2 text-xs font-medium">
           Chapter {chapter.order + 1} of {total}
@@ -184,7 +260,7 @@ function Player({
         type="button"
         onClick={() => setPaused((value) => !value)}
         aria-label={paused ? "Play" : "Pause"}
-        className="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 px-8 text-center"
+        className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-5 px-8 text-center"
       >
         {paused ? (
           <Pause className="size-16 opacity-80" aria-hidden />
@@ -199,9 +275,11 @@ function Player({
         >
           {scene.caption}
         </span>
-        <span key={`line-${index}`} className="animate-in fade-in-0 text-base leading-relaxed duration-700">
-          {scene.narration}
-        </span>
+        <SpokenLine
+          key={`line-${index}`}
+          text={scene.narration}
+          charIndex={spoken?.narration === scene.narration ? spoken.charIndex : null}
+        />
       </button>
 
       <div className="absolute right-3 bottom-36 flex flex-col items-end gap-3">
@@ -216,7 +294,7 @@ function Player({
         {card && <SourceSheet card={card} bank={bank} onOpenChange={onSourceOpenChange} />}
       </div>
 
-      <div className="flex flex-col gap-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="relative flex flex-col gap-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="min-w-0 pr-24">
           <p className="truncate font-semibold">{chapter.title}</p>
           <p className="flex items-center gap-1 text-xs">
@@ -226,6 +304,11 @@ function Player({
               {bank.attribution && ` · ${bank.attribution}`}
             </span>
           </p>
+          {scene.video && (
+            <a href={scene.video.pageUrl} target="_blank" rel="noreferrer" className="block truncate text-xs underline">
+              Video: {scene.video.credit} on Pixabay
+            </a>
+          )}
         </div>
         <div className="flex gap-2">
           <button

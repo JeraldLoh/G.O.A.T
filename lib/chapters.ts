@@ -12,6 +12,7 @@ import {
   type Chapter,
   type VideoItem,
 } from "@/lib/schemas";
+import { attachVideos, hasStockKey } from "@/lib/stock";
 import { getBank, listBanks, readChapters, saveChapters, saveGeneration } from "@/lib/store";
 
 const FALLBACK_EMOJI = "💡";
@@ -84,7 +85,8 @@ async function writeScript(bankId: string, title: string, cards: Card[]): Promis
   const usage: Usage = { inputTokens: 0, outputTokens: 0, costUsd: 0 };
   let chapters: Chapter[];
   try {
-    chapters = toChapters(bankId, cards, await generator.writeChapters(title, topics, usage));
+    const written = toChapters(bankId, cards, await generator.writeChapters(title, topics, usage));
+    chapters = await attachVideos(written);
   } catch (error) {
     console.error("Chapter script failed, using cards", error);
     return fromCards();
@@ -124,17 +126,43 @@ export async function getChapters(bankId: string): Promise<Chapter[] | null> {
     console.error("Could not read chapters", error);
     return null;
   });
-  let chapters = saved;
-  if (!chapters) {
+  let chapters: Chapter[];
+  if (!saved || needsScript(saved)) {
     let pending = inFlight.get(bankId);
     if (!pending) {
       pending = writeScript(bankId, detail.bank.title, visible).finally(() => inFlight.delete(bankId));
       inFlight.set(bankId, pending);
     }
-    chapters = await pending;
+    const written = await pending;
+    // If an older script couldn't be replaced, it still beats a card-based one.
+    chapters = saved && !written.some(hasVideoQuery) ? saved : written;
+  } else if (needsVideos(saved)) {
+    chapters = await attachVideos(saved);
+    await saveChapters(bankId, chapters).catch((error) => {
+      console.error("Could not save videos", error);
+    });
+  } else {
+    chapters = saved;
   }
 
   return withoutHiddenCards(chapters, visible);
+}
+
+const hasVideoQuery = (chapter: Chapter) => chapter.scenes.some((scene) => scene.videoQuery);
+
+/** Scripts from before stock video have no search terms, so they're written again once. */
+function needsScript(saved: Chapter[] | null): boolean {
+  return !saved || !saved.some(hasVideoQuery);
+}
+
+/** A script written while no Pixabay key was set still has search terms to use. */
+function needsVideos(saved: Chapter[]): boolean {
+  return (
+    hasStockKey() &&
+    saved.some((chapter) =>
+      chapter.scenes.some((scene) => scene.videoQuery && scene.video === undefined),
+    )
+  );
 }
 
 function visibleCards(cards: Card[]): Card[] {
@@ -176,7 +204,7 @@ export async function getVideoFeed(filter: BankFilter): Promise<VideoItem[]> {
       const visible = visibleCards(cards);
       if (visible.length === 0) return [];
       const saved = await readChapters(bank.id).catch(() => null);
-      if (!saved) missing.push(bank.id);
+      if (needsScript(saved) || (saved && needsVideos(saved))) missing.push(bank.id);
       return withoutHiddenCards(saved ?? chaptersFromCards(bank.id, visible), visible).map(
         (chapter): VideoItem => ({
           chapter,
