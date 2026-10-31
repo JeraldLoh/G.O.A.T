@@ -129,6 +129,14 @@ export const ChapterSchema = z.object({
   scenes: z.array(SceneSchema).min(1),
 });
 
+/** One screen of a video feed: a chapter with what its player needs. */
+export const VideoItemSchema = z.object({
+  chapter: ChapterSchema,
+  bank: BankSummarySchema,
+  cards: z.array(CardSchema),
+  quizzes: z.array(QuizSchema),
+});
+
 export const FeedEntrySchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("card"), card: CardSchema, bank: BankSummarySchema }),
   z.object({ kind: z.literal("quiz"), quiz: QuizSchema, bank: BankSummarySchema }),
@@ -227,6 +235,7 @@ export type Generation = z.infer<typeof GenerationSchema>;
 export type Flag = z.infer<typeof FlagSchema>;
 export type Scene = z.infer<typeof SceneSchema>;
 export type Chapter = z.infer<typeof ChapterSchema>;
+export type VideoItem = z.infer<typeof VideoItemSchema>;
 export type FeedEntry = z.infer<typeof FeedEntrySchema>;
 export type Stats = z.infer<typeof StatsSchema>;
 export type SeedFile = z.infer<typeof SeedFileSchema>;

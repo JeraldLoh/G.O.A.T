@@ -8,12 +8,12 @@ import { cn } from "@/lib/utils";
 /** "View all chapters": numbered tiles, with the playing one marked. */
 export function ChapterGrid({
   chapters,
-  active,
+  activeId,
   onPick,
 }: {
   chapters: Chapter[];
-  active: number;
-  onPick: (index: number) => void;
+  activeId?: string;
+  onPick: (chapterId: string) => void;
 }) {
   const progress = useProgress();
   const seen = new Set(progress.seen);
@@ -22,12 +22,12 @@ export function ChapterGrid({
     <ul className="grid grid-cols-5 gap-2 pb-4">
       {chapters.map((chapter, index) => {
         const watched = chapter.scenes.every((scene) => seen.has(scene.cardId));
-        const current = index === active;
+        const current = chapter.id === activeId;
         return (
           <li key={chapter.id}>
             <button
               type="button"
-              onClick={() => onPick(index)}
+              onClick={() => onPick(chapter.id)}
               aria-label={`Chapter ${index + 1}: ${chapter.title}${watched ? ", watched" : ""}`}
               aria-current={current ? "true" : undefined}
               className={cn(

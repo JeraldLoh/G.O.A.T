@@ -5,8 +5,14 @@
 import { hasPrice } from "@/lib/cost";
 import type { ChapterInput, GeneratedChapters, Usage } from "@/lib/llm";
 import { getGenerator, isOverDailyLimit } from "@/lib/pipeline";
-import { FLAG_HIDE_THRESHOLD, type Card, type Chapter } from "@/lib/schemas";
-import { getBank, readChapters, saveChapters, saveGeneration } from "@/lib/store";
+import {
+  FLAG_HIDE_THRESHOLD,
+  type BankFilter,
+  type Card,
+  type Chapter,
+  type VideoItem,
+} from "@/lib/schemas";
+import { getBank, listBanks, readChapters, saveChapters, saveGeneration } from "@/lib/store";
 
 const FALLBACK_EMOJI = "💡";
 const refFor = (index: number) => `c${index + 1}`;
@@ -50,11 +56,14 @@ function toChapters(bankId: string, cards: Card[], generated: GeneratedChapters)
   });
 }
 
+function chaptersFromCards(bankId: string, cards: Card[]): Chapter[] {
+  return groupByTopic(cards).map(({ topic, cards: topicCards }, order) =>
+    chapterFromCards(bankId, topic, topicCards, order),
+  );
+}
+
 async function writeScript(bankId: string, title: string, cards: Card[]): Promise<Chapter[]> {
-  const fromCards = () =>
-    groupByTopic(cards).map(({ topic, cards: topicCards }, order) =>
-      chapterFromCards(bankId, topic, topicCards, order),
-    );
+  const fromCards = () => chaptersFromCards(bankId, cards);
 
   const generator = getGenerator();
   if (!generator.writeChapters || !hasPrice(generator.model) || (await isOverDailyLimit())) {
@@ -108,7 +117,7 @@ export async function getChapters(bankId: string): Promise<Chapter[] | null> {
   const detail = await getBank(bankId);
   if (!detail) return null;
 
-  const visible = detail.cards.filter((card) => card.verified && card.flags < FLAG_HIDE_THRESHOLD);
+  const visible = visibleCards(detail.cards);
   if (visible.length === 0) return [];
 
   const saved = await readChapters(bankId).catch((error) => {
@@ -125,6 +134,14 @@ export async function getChapters(bankId: string): Promise<Chapter[] | null> {
     chapters = await pending;
   }
 
+  return withoutHiddenCards(chapters, visible);
+}
+
+function visibleCards(cards: Card[]): Card[] {
+  return cards.filter((card) => card.verified && card.flags < FLAG_HIDE_THRESHOLD);
+}
+
+function withoutHiddenCards(chapters: Chapter[], visible: Card[]): Chapter[] {
   const visibleIds = new Set(visible.map((card) => card.id));
   return chapters
     .map((chapter) => ({
@@ -132,4 +149,48 @@ export async function getChapters(bankId: string): Promise<Chapter[] | null> {
       scenes: chapter.scenes.filter((scene) => visibleIds.has(scene.cardId)),
     }))
     .filter((chapter) => chapter.scenes.length > 0);
+}
+
+/** One at a time, because free-tier keys have low per-minute limits. */
+async function writeMissingScripts(bankIds: string[]): Promise<void> {
+  for (const bankId of bankIds) {
+    await getChapters(bankId).catch((error) => console.error("Background script failed", error));
+  }
+}
+
+/**
+ * Chapters across matching banks, for the Videos tab: each bank's first chapter,
+ * then each bank's second, and so on, so one bank doesn't fill the feed. This
+ * never waits on the AI: a bank with no script yet shows its cards now and has
+ * its script written in the background for the next visit.
+ */
+export async function getVideoFeed(filter: BankFilter): Promise<VideoItem[]> {
+  const banks = await listBanks(filter);
+  const details = (await Promise.all(banks.map((bank) => getBank(bank.id)))).flatMap((detail) =>
+    detail ? [detail] : [],
+  );
+
+  const missing: string[] = [];
+  const perBank = await Promise.all(
+    details.map(async ({ bank, cards, quizzes, summary }) => {
+      const visible = visibleCards(cards);
+      if (visible.length === 0) return [];
+      const saved = await readChapters(bank.id).catch(() => null);
+      if (!saved) missing.push(bank.id);
+      return withoutHiddenCards(saved ?? chaptersFromCards(bank.id, visible), visible).map(
+        (chapter): VideoItem => ({
+          chapter,
+          bank: summary,
+          cards: visible,
+          quizzes: quizzes.filter((quiz) => quiz.topic === chapter.topic),
+        }),
+      );
+    }),
+  );
+  void writeMissingScripts(missing);
+
+  const rounds = Math.max(0, ...perBank.map((items) => items.length));
+  return Array.from({ length: rounds }, (_, round) =>
+    perBank.flatMap((items) => (items[round] ? [items[round]] : [])),
+  ).flat();
 }

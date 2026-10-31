@@ -101,6 +101,8 @@ type SlideProps = {
   playing: boolean;
   muted: boolean;
   hasQuiz: boolean;
+  /** Leaves room for the close button, which the Videos tab doesn't have. */
+  closable: boolean;
   onToggleMute: () => void;
   onOpenChapters: () => void;
   onOpenQuiz: () => void;
@@ -126,6 +128,7 @@ function Player({
   playing,
   muted,
   hasQuiz,
+  closable,
   onToggleMute,
   onOpenChapters,
   onOpenQuiz,
@@ -160,7 +163,7 @@ function Player({
         BACKGROUNDS[chapter.order % BACKGROUNDS.length],
       )}
     >
-      <div className="px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pl-14">
+      <div className={cn("px-3 pt-[max(0.75rem,env(safe-area-inset-top))]", closable && "pl-14")}>
         <SceneBars count={chapter.scenes.length} index={index} ms={sceneMs(scene)} playing={running} />
         <p className="mt-2 text-xs font-medium">
           Chapter {chapter.order + 1} of {total}
