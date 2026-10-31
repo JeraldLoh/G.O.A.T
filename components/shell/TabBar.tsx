@@ -13,11 +13,11 @@ const TABS = [
 ];
 
 /** Routes that run as a full-screen flow with their own exit, so the tab bar steps aside. */
-const FULL_SCREEN = ["/upload"];
+const FULL_SCREEN = ["/upload", "/learn"];
 
 export function TabBar() {
   const pathname = usePathname();
-  if (FULL_SCREEN.includes(pathname)) return null;
+  if (FULL_SCREEN.some((route) => pathname.startsWith(route))) return null;
 
   return (
     <nav className="grid grid-cols-4 border-t bg-background pb-[env(safe-area-inset-bottom)]">

@@ -1,4 +1,4 @@
-import type { Bank, Card, Flag, Generation, Quiz } from "@/lib/schemas";
+import type { Bank, Card, Chapter, Flag, Generation, Quiz } from "@/lib/schemas";
 
 /** Bank without sourceText, which is large and only needed for a single bank. */
 export type BankMeta = Omit<Bank, "sourceText">;
@@ -23,6 +23,9 @@ export type Backend = {
   saveCard(card: Card): Promise<void>;
   saveQuiz(quiz: Quiz): Promise<void>;
   saveGeneration(generation: Generation): Promise<void>;
+  /** The saved script for a bank, or null if none has been generated. */
+  readChapters(bankId: string): Promise<Chapter[] | null>;
+  saveChapters(bankId: string, chapters: Chapter[]): Promise<void>;
   /** One flag per device per card. Returns the flag count, or null if the card is unknown. */
   addFlag(input: Pick<Flag, "cardId" | "deviceId" | "reason">): Promise<number | null>;
   /** One rating per device per bank; rating again replaces it. Returns null if the bank is unknown. */

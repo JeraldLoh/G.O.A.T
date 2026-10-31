@@ -111,6 +111,24 @@ export const FlagSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
+/** One narrated screen of a video chapter. Grounded through cardId: it inherits that card's verified quote. */
+export const SceneSchema = z.object({
+  cardId: z.string(),
+  caption: z.string().min(1),
+  narration: z.string().min(1),
+  emoji: z.string().max(16),
+});
+
+/** A video chapter: one topic of a bank, played as a sequence of scenes. */
+export const ChapterSchema = z.object({
+  id: z.string(),
+  bankId: z.string(),
+  topic: z.string().min(1),
+  title: z.string().min(1),
+  order: z.number().int().nonnegative(),
+  scenes: z.array(SceneSchema).min(1),
+});
+
 export const FeedEntrySchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("card"), card: CardSchema, bank: BankSummarySchema }),
   z.object({ kind: z.literal("quiz"), quiz: QuizSchema, bank: BankSummarySchema }),
@@ -207,6 +225,8 @@ export type Card = z.infer<typeof CardSchema>;
 export type Quiz = z.infer<typeof QuizSchema>;
 export type Generation = z.infer<typeof GenerationSchema>;
 export type Flag = z.infer<typeof FlagSchema>;
+export type Scene = z.infer<typeof SceneSchema>;
+export type Chapter = z.infer<typeof ChapterSchema>;
 export type FeedEntry = z.infer<typeof FeedEntrySchema>;
 export type Stats = z.infer<typeof StatsSchema>;
 export type SeedFile = z.infer<typeof SeedFileSchema>;
