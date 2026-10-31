@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/discovery/Toaster";
+import { SpeechUnlock } from "@/components/shell/SpeechUnlock";
 import { TabBar } from "@/components/shell/TabBar";
 
 // The license line lives on the Stats page (and README) rather than above the
@@ -9,6 +10,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="min-h-0 flex-1">{children}</main>
       <TabBar />
       <Toaster />
+      <SpeechUnlock />
     </div>
   );
 }
