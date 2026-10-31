@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "check:seed": "tsx scripts/check-seed.ts",
-    "seed:sql": "tsx scripts/seed-sql.ts"
+    "seed:sql": "tsx scripts/seed-sql.ts",
+    "eval": "tsx --env-file-if-exists=.env.local scripts/eval.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
