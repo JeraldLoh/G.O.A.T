@@ -91,6 +91,41 @@ Accounts/login, comments, payments, behavior-based recommendations, mobile apps,
 | Demo mode | `DEMO_MODE=1` loads banks from `/seed/*.json` | Works with no Supabase and no LLM key; also what a reviewer can run in one command |
 | Evaluation | `scripts/eval.ts` | Runs the pipeline on 3+ documents and prints bank count, cards, % verified, avg time, avg cost |
 
+### Color scheme — "Earthy Tones"
+Base palette (10 colors, light to dark within each hue family). Define them as CSS variables in `app/globals.css` and map them to the shadcn tokens below; components use the tokens, not raw hex.
+
+| Name | Hex | Use |
+|---|---|---|
+| olive | `#797D62` | Primary brand color: tab bar active, primary buttons (with `cream` text), progress bar fill |
+| sage | `#9B9B7A` | Secondary surfaces, inactive chips, borders on dark areas |
+| khaki | `#BAA587` | Borders, dividers, muted icons |
+| peach | `#D9AE94` | Quote block background tint, subtle highlights |
+| cream | `#F1DCA7` | Card background, text on `olive` buttons |
+| sunflower | `#FFCB69` | Accent: verified badge, streaks, completion screen, focus ring |
+| apricot | `#E8AC65` | Quiz option hover/selected |
+| terracotta | `#D08C60` | Secondary accent: flag button, rating, "AI-seeded" label |
+| clay | `#B58463` | Pressed states, chart series |
+| brown | `#997B66` | Muted metadata badges (license, level) |
+
+Added colors (the base palette has no text color, no page background and no error color):
+
+| Name | Hex | Use |
+|---|---|---|
+| ink | `#2F3125` | All body and heading text (12.3:1 on `paper`, 9.8:1 on `cream`) |
+| paper | `#FBF6EA` | Page background |
+| olive-deep | `#5C6146` | Text-sized olive: links, "correct" quiz feedback, source link (6.0:1 on `paper`) |
+| brick | `#A8432F` | Errors and "wrong answer" quiz feedback (5.5:1 on `paper`) |
+| bark | `#8A5A3C` | Text-sized terracotta/brown (5.4:1 on `paper`) |
+| night | `#23241B` | Dark-mode background (`paper` text on it is 14.5:1) |
+
+Accessibility rules (WCAG AA, contrast checked):
+- **Never use a base palette color for text on `paper`, `cream` or white** — none of the 10 reaches 4.5:1. Use `ink`, `olive-deep`, `bark` or `brick` for text.
+- Base colors are for fills, borders and large shapes. On those fills, text is `ink` (passes on everything from `sage` to `sunflower`) — except on `olive`, where button text is `cream`/`paper` and must be bold/large (about 4:1).
+- Do not signal quiz right/wrong by color alone: add a ✓ / ✗ icon and the words "Correct" / "Not quite".
+
+shadcn token mapping (light): `--background: paper`, `--foreground: ink`, `--card: cream`, `--card-foreground: ink`, `--primary: olive`, `--primary-foreground: paper`, `--secondary: sage`, `--secondary-foreground: ink`, `--muted: peach`, `--muted-foreground: bark`, `--accent: sunflower`, `--accent-foreground: ink`, `--destructive: brick`, `--border: khaki`, `--input: khaki`, `--ring: sunflower`.
+Dark mode (optional, only if time allows): `--background: night`, `--foreground: paper`, `--card: #2F3125`, `--primary: sunflower`, `--primary-foreground: ink`.
+
 ### Generation pipeline (streaming)
 1. `POST /api/banks`: validate size (live demo cap ~3,000 words), license, tags -> extract text -> save the bank.
 2. Split the text into 3–6 chunks on headings/paragraphs.
