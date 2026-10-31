@@ -4,8 +4,8 @@ import { RotateCcw, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BottomSheet } from "@/components/discovery/BottomSheet";
-import { QuizCard } from "@/components/feed/QuizCard";
 import { ChapterGrid } from "@/components/video/ChapterGrid";
+import { ChapterQuiz } from "@/components/video/ChapterQuiz";
 import { ChapterSlide } from "@/components/video/ChapterSlide";
 import type { VideoItem } from "@/lib/schemas";
 
@@ -147,13 +147,15 @@ export function VideoFeed({
         title="Test your knowledge"
         description={current?.chapter.topic}
       >
-        <div className="flex flex-col gap-2">
-          {current?.quizzes.map((quiz) => (
-            <div key={quiz.id} className="min-h-[24rem]">
-              <QuizCard quiz={quiz} bank={current.bank} />
-            </div>
-          ))}
-        </div>
+        {/* Keyed by chapter so each chapter quiz starts at question 1. */}
+        {current && (
+          <ChapterQuiz
+            key={current.chapter.id}
+            quizzes={current.quizzes}
+            bank={current.bank}
+            onDone={() => setSheet(null)}
+          />
+        )}
       </BottomSheet>
     </div>
   );
