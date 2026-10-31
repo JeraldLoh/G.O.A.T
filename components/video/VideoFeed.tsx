@@ -2,7 +2,7 @@
 
 import { RotateCcw, X } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { BottomSheet } from "@/components/discovery/BottomSheet";
 import { ChapterGrid } from "@/components/video/ChapterGrid";
 import { ChapterQuiz } from "@/components/video/ChapterQuiz";
@@ -10,6 +10,11 @@ import { ChapterSlide } from "@/components/video/ChapterSlide";
 import type { VideoItem } from "@/lib/schemas";
 
 type Sheet = "chapters" | "quiz" | null;
+
+function subscribeToVisibility(onChange: () => void): () => void {
+  document.addEventListener("visibilitychange", onChange);
+  return () => document.removeEventListener("visibilitychange", onChange);
+}
 
 /**
  * The vertical video player: one chapter per screen, playing the one in view and
@@ -38,6 +43,12 @@ export function VideoFeed({
     () => typeof navigator !== "undefined" && navigator.userActivation?.hasBeenActive === true,
   );
   const scroller = useRef<HTMLDivElement>(null);
+  // Tabs share one speech queue, so a hidden tab would keep cutting off the visible one.
+  const visible = useSyncExternalStore(
+    subscribeToVisibility,
+    () => document.visibilityState === "visible",
+    () => true,
+  );
 
   const goTo = useCallback((index: number, behavior: ScrollBehavior = "smooth") => {
     scroller.current?.children[index]?.scrollIntoView({ behavior });
@@ -83,7 +94,7 @@ export function VideoFeed({
             bank={item.bank}
             cards={new Map(item.cards.map((card) => [card.id, card]))}
             active={index === active}
-            playing={started && sheet === null && !sourceOpen}
+            playing={started && visible && sheet === null && !sourceOpen}
             muted={muted}
             hasQuiz={item.quizzes.length > 0}
             closable={onClose !== undefined}
