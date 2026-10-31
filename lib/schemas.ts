@@ -233,6 +233,8 @@ export const LocalFiltersSchema = z.object({
 export const LocalProgressSchema = z.object({
   seen: z.array(z.string()),
   quiz: z.record(z.string(), z.boolean()),
+  /** Video chapters played to the end. Reading a chapter's cards doesn't count. */
+  watched: z.array(z.string()).default([]),
 });
 
 export type Subject = z.infer<typeof SubjectSchema>;

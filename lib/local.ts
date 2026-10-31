@@ -13,6 +13,8 @@ import {
   type Subject,
 } from "@/lib/schemas";
 
+const EMPTY_PROGRESS: LocalProgress = { seen: [], quiz: {}, watched: [] };
+
 const KEYS = {
   interests: "kb:interests",
   filters: "kb:filters",
@@ -66,7 +68,7 @@ export function setFilters(filters: LocalFilters): void {
 }
 
 export function getProgress(): LocalProgress {
-  return read(KEYS.progress, LocalProgressSchema, { seen: [], quiz: {} });
+  return read(KEYS.progress, LocalProgressSchema, EMPTY_PROGRESS);
 }
 
 export function markSeen(cardId: string): void {
@@ -75,16 +77,21 @@ export function markSeen(cardId: string): void {
   write(KEYS.progress, { ...progress, seen: [...progress.seen, cardId] });
 }
 
+export function markWatched(chapterId: string): void {
+  const progress = getProgress();
+  if (progress.watched.includes(chapterId)) return;
+  write(KEYS.progress, { ...progress, watched: [...progress.watched, chapterId] });
+}
+
 export function recordQuiz(quizId: string, correct: boolean): void {
   const progress = getProgress();
   write(KEYS.progress, { ...progress, quiz: { ...progress.quiz, [quizId]: correct } });
 }
 
 export function resetProgress(): void {
-  write(KEYS.progress, { seen: [], quiz: {} });
+  write(KEYS.progress, EMPTY_PROGRESS);
 }
 
-const EMPTY_PROGRESS: LocalProgress = { seen: [], quiz: {} };
 // useSyncExternalStore needs the same object back until the data changes,
 // so the parsed value is cached against the raw string.
 let progressCache: { raw: string | null; value: LocalProgress } = {

@@ -15,13 +15,12 @@ export function ChapterGrid({
   activeId?: string;
   onPick: (chapterId: string) => void;
 }) {
-  const progress = useProgress();
-  const seen = new Set(progress.seen);
+  const { watched: watchedIds } = useProgress();
 
   return (
     <ul className="grid grid-cols-5 gap-2 pb-4">
       {chapters.map((chapter, index) => {
-        const watched = chapter.scenes.every((scene) => seen.has(scene.cardId));
+        const watched = watchedIds.includes(chapter.id);
         const current = chapter.id === activeId;
         return (
           <li key={chapter.id}>

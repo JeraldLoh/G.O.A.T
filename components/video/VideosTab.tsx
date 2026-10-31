@@ -17,12 +17,24 @@ function videoQuery(): string {
   return params.toString();
 }
 
-/** Random order like the Fun facts feed (a new shuffle per visit), unwatched chapters first. */
-function unwatchedFirst(items: VideoItem[]): VideoItem[] {
-  const seen = new Set(getProgress().seen);
-  const watched = (item: VideoItem) => item.chapter.scenes.every((scene) => seen.has(scene.cardId));
-  const mixed = shuffle(items, Date.now());
-  return [...mixed.filter((item) => !watched(item)), ...mixed.filter(watched)];
+/**
+ * Banks in random order like the Fun facts feed (a new shuffle per visit), one
+ * chapter from each in turn. Within a bank, chapters stay in sequence from the
+ * next unwatched one, so nobody starts on chapter 2. Watched chapters go last.
+ */
+function nextUpFirst(items: VideoItem[]): VideoItem[] {
+  const watched = new Set(getProgress().watched);
+  const unwatched = (item: VideoItem) => !watched.has(item.chapter.id);
+  const queues = shuffle([...new Set(items.map((item) => item.bank.id))], Date.now()).map((bankId) =>
+    items
+      .filter((item) => item.bank.id === bankId && unwatched(item))
+      .sort((a, b) => a.chapter.order - b.chapter.order),
+  );
+  const rounds = Math.max(0, ...queues.map((queue) => queue.length));
+  const next = Array.from({ length: rounds }, (_, round) =>
+    queues.flatMap((queue) => (queue[round] ? [queue[round]] : [])),
+  ).flat();
+  return [...next, ...items.filter((item) => !unwatched(item))];
 }
 
 /** The Videos tab: chapters from every bank matching the learner's interests and filters. */
@@ -38,7 +50,7 @@ export function VideosTab() {
         if (!response.ok) throw new Error(`Videos request failed: ${response.status}`);
         return response.json();
       })
-      .then((data: VideoItem[]) => live && setItems(unwatchedFirst(data)))
+      .then((data: VideoItem[]) => live && setItems(nextUpFirst(data)))
       .catch(() => live && setFailed(true));
     return () => {
       live = false;

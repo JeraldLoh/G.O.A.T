@@ -3,7 +3,7 @@
 import { BadgeCheck, GraduationCap, LayoutGrid, Pause, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { SourceSheet } from "@/components/feed/SourceSheet";
-import { markSeen } from "@/lib/local";
+import { markSeen, markWatched } from "@/lib/local";
 import type { BankSummary, Card, Chapter, Scene } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
 
@@ -221,7 +221,10 @@ function Player({
   useEffect(() => {
     onDone.current = () => {
       if (index + 1 < chapter.scenes.length) setIndex(index + 1);
-      else onEnded();
+      else {
+        markWatched(chapter.id);
+        onEnded();
+      }
     };
   });
   const [advance] = useState(() => () => onDone.current());
