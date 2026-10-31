@@ -1,8 +1,10 @@
 "use client";
 
-import { SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
-import { SubjectGrid, useSubjectCounts } from "@/components/discovery/InterestGate";
+import { BottomSheet } from "@/components/discovery/BottomSheet";
+import { LEVEL_ICON, OptionChip, SummaryChip } from "@/components/discovery/Chip";
+import { useSubjectCounts } from "@/components/discovery/InterestGate";
 import {
   FILTERS_EVENT,
   notifyFiltersChanged,
@@ -10,13 +12,6 @@ import {
 } from "@/components/discovery/storage";
 import { LEVEL_LABEL, SUBJECT_META } from "@/components/discovery/subjects";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { getFilters, getInterests, setFilters, setInterests } from "@/lib/local";
 import {
   LEVELS,
@@ -26,7 +21,6 @@ import {
   type LocalFilters,
   type Subject,
 } from "@/lib/schemas";
-import { cn } from "@/lib/utils";
 
 /** Filter row above the feed: topics (kb:interests), level and tags (kb:filters). Changes apply immediately. */
 export function FilterBar() {
@@ -36,7 +30,7 @@ export function FilterBar() {
   const [banks, setBanks] = useState<BankSummary[]>([]);
   const counts = useSubjectCounts();
 
-  // Refresh the tag list each time the dialog opens, so new uploads show up.
+  // Refresh the tag list each time the sheet opens, so new uploads show up.
   useEffect(() => {
     if (!open) return;
     fetch("/api/banks")
@@ -86,130 +80,95 @@ export function FilterBar() {
       <div className="flex items-center gap-2 overflow-x-auto border-b px-3 py-2 [scrollbar-width:none]">
         <Button
           variant={active ? "default" : "outline"}
-          size="sm"
           onClick={() => setOpen(true)}
           aria-label="Open filters"
+          className="h-9 shrink-0 rounded-full px-3.5"
         >
           <SlidersHorizontal aria-hidden />
           Filters
         </Button>
-        <Chip onClick={() => setOpen(true)}>{subjectSummary}</Chip>
+        <SummaryChip onClick={() => setOpen(true)}>{subjectSummary}</SummaryChip>
         {filters.level && (
-          <Chip onRemove={() => setLevel(null)}>{LEVEL_LABEL[filters.level]}</Chip>
+          <SummaryChip onRemove={() => setLevel(null)}>{LEVEL_LABEL[filters.level]}</SummaryChip>
         )}
         {filters.tags.map((tag) => (
-          <Chip key={tag} onRemove={() => toggleTag(tag)}>
+          <SummaryChip key={tag} onRemove={() => toggleTag(tag)}>
             {`#${tag}`}
-          </Chip>
+          </SummaryChip>
         ))}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[85dvh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Filter your feed</DialogTitle>
-            <DialogDescription>Changes apply right away.</DialogDescription>
-          </DialogHeader>
+      <BottomSheet open={open} onOpenChange={setOpen} title="Filter your feed">
+        <section className="grid gap-2">
+          <h3 className="text-sm font-semibold">Topics</h3>
+          <div className="flex flex-wrap gap-2">
+            {SUBJECTS.map((subject) => {
+              const { label, icon } = SUBJECT_META[subject];
+              return (
+                <OptionChip
+                  key={subject}
+                  icon={icon}
+                  selected={subjects.includes(subject)}
+                  muted={counts !== undefined && !counts[subject]}
+                  onClick={() => toggleSubject(subject)}
+                >
+                  {label}
+                </OptionChip>
+              );
+            })}
+          </div>
+        </section>
 
-          <section className="grid gap-2">
-            <h3 className="text-sm font-medium">Topics</h3>
-            <SubjectGrid selected={subjects} onToggle={toggleSubject} counts={counts} />
-          </section>
+        <section className="grid gap-2">
+          <h3 className="text-sm font-semibold">Level</h3>
+          <div className="flex flex-wrap gap-2">
+            <OptionChip selected={filters.level === null} onClick={() => setLevel(null)}>
+              Any
+            </OptionChip>
+            {LEVELS.map((level) => (
+              <OptionChip
+                key={level}
+                icon={LEVEL_ICON[level]}
+                selected={filters.level === level}
+                onClick={() => setLevel(level)}
+              >
+                {LEVEL_LABEL[level]}
+              </OptionChip>
+            ))}
+          </div>
+        </section>
 
+        {tags.length > 0 && (
           <section className="grid gap-2">
-            <h3 className="text-sm font-medium">Level</h3>
+            <h3 className="text-sm font-semibold">Tags</h3>
             <div className="flex flex-wrap gap-2">
-              <Toggle on={filters.level === null} onClick={() => setLevel(null)}>
-                Any
-              </Toggle>
-              {LEVELS.map((level) => (
-                <Toggle key={level} on={filters.level === level} onClick={() => setLevel(level)}>
-                  {LEVEL_LABEL[level]}
-                </Toggle>
+              {tags.map((tag) => (
+                <OptionChip key={tag} selected={filters.tags.includes(tag)} onClick={() => toggleTag(tag)}>
+                  #{tag}
+                </OptionChip>
               ))}
             </div>
           </section>
+        )}
 
-          <section className="grid gap-2">
-            <h3 className="text-sm font-medium">Tags</h3>
-            {tags.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No tags in these topics yet.</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <Toggle key={tag} on={filters.tags.includes(tag)} onClick={() => toggleTag(tag)}>
-                    #{tag}
-                  </Toggle>
-                ))}
-              </div>
-            )}
-          </section>
-
+        <div className="flex gap-2">
           {active && (
             <Button
-              variant="ghost"
+              variant="outline"
+              className="h-11 flex-1"
               onClick={() => {
                 updateSubjects([...SUBJECTS]);
                 updateFilters({ tags: [], level: null });
               }}
             >
-              Clear all filters
+              Clear all
             </Button>
           )}
-        </DialogContent>
-      </Dialog>
+          <Button className="h-11 flex-1" onClick={() => setOpen(false)}>
+            Show results
+          </Button>
+        </div>
+      </BottomSheet>
     </>
-  );
-}
-
-function Chip({
-  children,
-  onClick,
-  onRemove,
-}: {
-  children: string;
-  onClick?: () => void;
-  onRemove?: () => void;
-}) {
-  return (
-    <span className="flex shrink-0 items-center rounded-full bg-muted text-xs font-medium">
-      <button type="button" className="py-1 pl-3 pr-3 has-[+button]:pr-1" onClick={onClick}>
-        {children}
-      </button>
-      {onRemove && (
-        <button
-          type="button"
-          aria-label={`Remove ${children}`}
-          onClick={onRemove}
-          className="rounded-full py-1 pr-2 pl-1 hover:text-destructive"
-        >
-          <X aria-hidden className="size-3" />
-        </button>
-      )}
-    </span>
-  );
-}
-
-function Toggle({
-  on,
-  onClick,
-  children,
-}: {
-  on: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      onClick={onClick}
-      className={cn(
-        "rounded-full border px-3 py-1.5 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-        on ? "border-olive-deep bg-olive-deep text-paper" : "border-border bg-background hover:bg-muted",
-      )}
-    >
-      {children}
-    </button>
   );
 }

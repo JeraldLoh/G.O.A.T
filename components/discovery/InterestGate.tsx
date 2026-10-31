@@ -32,56 +32,7 @@ export function InterestGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/** Subject picker. Also used by FilterBar to change interests later. */
-export function SubjectGrid({
-  selected,
-  onToggle,
-  counts,
-}: {
-  selected: Subject[];
-  onToggle: (subject: Subject) => void;
-  counts?: Partial<Record<Subject, number>>;
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {SUBJECTS.map((subject) => {
-        const { label, icon: Icon } = SUBJECT_META[subject];
-        const on = selected.includes(subject);
-        const count = counts?.[subject] ?? 0;
-        return (
-          <button
-            key={subject}
-            type="button"
-            aria-pressed={on}
-            onClick={() => onToggle(subject)}
-            className={cn(
-              "relative flex flex-col items-start gap-2 rounded-xl border-2 p-3 text-left transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-              on
-                ? "border-olive-deep bg-cream"
-                : "border-border bg-background hover:bg-muted",
-            )}
-          >
-            <Icon aria-hidden className="size-5 text-olive-deep" />
-            <span className="font-medium">{label}</span>
-            {counts && (
-              <span className="text-xs text-muted-foreground">
-                {count === 0 ? "No banks yet" : `${count} bank${count === 1 ? "" : "s"}`}
-              </span>
-            )}
-            {on && (
-              <Check
-                aria-hidden
-                className="absolute top-2 right-2 size-5 rounded-full bg-olive-deep p-0.5 text-paper"
-              />
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/** Bank count per subject from /api/banks, for the picker hints. */
+/** Bank count per subject from /api/banks. */
 export function useSubjectCounts(): Partial<Record<Subject, number>> | undefined {
   const [counts, setCounts] = useState<Partial<Record<Subject, number>>>();
   useEffect(() => {
@@ -107,21 +58,61 @@ function InterestPicker({ onDone }: { onDone: (subjects: Subject[]) => void }) {
     );
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto p-6">
-      <p className="text-sm font-medium text-olive-deep">Welcome</p>
-      <h1 className="mt-1 text-2xl font-semibold">What do you want to learn?</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Pick a few topics. Your feed shows short cards and quizzes from free, openly licensed
-        material. You can change this any time.
-      </p>
-      <div className="mt-6">
-        <SubjectGrid selected={picked} onToggle={toggle} counts={counts} />
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto p-5 pb-2">
+        <h1 className="text-2xl font-semibold">What do you want to learn?</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Pick topics you like. You can change them later.</p>
+
+        <div className="mt-5 grid grid-cols-2 gap-2.5">
+          {SUBJECTS.map((subject) => {
+            const { label, icon: Icon } = SUBJECT_META[subject];
+            const on = picked.includes(subject);
+            const count = counts?.[subject] ?? 0;
+            return (
+              <button
+                key={subject}
+                type="button"
+                aria-pressed={on}
+                onClick={() => toggle(subject)}
+                className={cn(
+                  "relative flex min-h-24 flex-col justify-between rounded-2xl border-2 p-3.5 text-left transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  on ? "border-olive-deep bg-cream" : "border-border bg-background hover:bg-muted",
+                  counts && count === 0 && !on && "border-dashed opacity-70",
+                )}
+              >
+                <Icon aria-hidden className="size-6 text-olive-deep" />
+                <span className="font-medium">{label}</span>
+                {on ? (
+                  <Check
+                    aria-hidden
+                    className="absolute top-3 right-3 size-6 rounded-full bg-olive-deep p-1 text-paper"
+                  />
+                ) : (
+                  count > 0 && (
+                    <span className="absolute top-3 right-3 rounded-full bg-sunflower px-2 py-0.5 text-xs font-semibold text-ink">
+                      {count}
+                      <span className="sr-only"> {count === 1 ? "bank" : "banks"}</span>
+                    </span>
+                  )
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div className="mt-auto flex flex-col gap-2 pt-6">
-        <Button size="lg" className="h-11" disabled={picked.length === 0} onClick={() => onDone(picked)}>
-          {picked.length === 0 ? "Pick at least one topic" : `Start learning (${picked.length})`}
-        </Button>
-        <Button variant="ghost" onClick={() => onDone([...SUBJECTS])}>
+
+      {/* Actions stay in the thumb zone at the bottom. */}
+      <div className="grid gap-1 border-t bg-background p-4">
+        {picked.length === 0 ? (
+          <p className="flex h-11 items-center justify-center text-sm text-muted-foreground">
+            Pick at least one topic to start
+          </p>
+        ) : (
+          <Button size="lg" className="h-11 text-base" onClick={() => onDone(picked)}>
+            Start learning
+          </Button>
+        )}
+        <Button variant="ghost" className="h-11" onClick={() => onDone([...SUBJECTS])}>
           Skip, show me everything
         </Button>
       </div>

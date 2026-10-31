@@ -86,7 +86,8 @@
   --secondary: var(--color-sage);
   --secondary-foreground: var(--color-ink);
   --muted: var(--color-linen);
-  --muted-foreground: var(--color-bark);
+  /* olive-deep, not bark: brown hint text read like the brick error color */
+  --muted-foreground: var(--color-olive-deep);
   --accent: var(--color-sunflower);
   --accent-foreground: var(--color-ink);
   --destructive: var(--color-brick);

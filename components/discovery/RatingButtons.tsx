@@ -1,81 +1,65 @@
 "use client";
 
 import { ThumbsDown, ThumbsUp } from "lucide-react";
-import { useState } from "react";
-import { setMyRating, useMyRating } from "@/components/discovery/storage";
-import { Button } from "@/components/ui/button";
-import { getDeviceId } from "@/lib/local";
+import { useRating } from "@/components/discovery/useTrust";
 import { cn } from "@/lib/utils";
 
 /**
- * Thumbs up/down on a bank's accuracy. The same bank appears on many cards,
- * so every instance re-reads the vote when any of them changes it.
+ * Thumbs up/down on a bank's accuracy. Prefer CardActions on feed cards and
+ * BankRatingPrompt on the completion screen; this inline version stays for
+ * places that want the buttons visible.
  */
 export function RatingButtons({
   bankId,
   accuracyScore = null,
+  className,
 }: {
   bankId: string;
   /** BankSummary.accuracyScore, shown until this device votes. */
   accuracyScore?: number | null;
+  className?: string;
 }) {
-  const saved = useMyRating(bankId);
-  const [pending, setPending] = useState<1 | -1 | null>(null); // optimistic, until saved
-  const mine = pending ?? saved;
-  const [score, setScore] = useState(accuracyScore);
-  const [error, setError] = useState(false);
-
-  async function rate(value: 1 | -1) {
-    if (value === mine) return;
-    setPending(value);
-    setError(false);
-    try {
-      const response = await fetch("/api/rate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bankId, deviceId: getDeviceId(), value }),
-      });
-      if (!response.ok) throw new Error(`Rate failed: ${response.status}`);
-      const result = (await response.json()) as { accuracyScore: number | null };
-      setScore(result.accuracyScore);
-      setMyRating(bankId, value);
-    } catch {
-      setError(true);
-    } finally {
-      setPending(null);
-    }
-  }
+  const { mine, score, error, rate } = useRating(bankId, accuracyScore);
 
   return (
-    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-      <span className="mr-1">Accurate?</span>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Yes, accurate"
-        aria-pressed={mine === 1}
-        onClick={() => rate(1)}
-        className={cn(mine === 1 && "bg-accent text-accent-foreground")}
-      >
-        <ThumbsUp aria-hidden />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="No, not accurate"
-        aria-pressed={mine === -1}
-        onClick={() => rate(-1)}
-        className={cn(mine === -1 && "bg-accent text-accent-foreground")}
-      >
-        <ThumbsDown aria-hidden />
-      </Button>
+    <div className={cn("flex items-center gap-2", className)}>
+      <ThumbButton up selected={mine === 1} onClick={() => rate(1)} />
+      <ThumbButton up={false} selected={mine === -1} onClick={() => rate(-1)} />
       {error ? (
-        <span role="alert" className="text-destructive">
+        <span role="alert" className="text-sm text-destructive">
           Couldn&apos;t save
         </span>
       ) : (
-        score !== null && <span>{Math.round(score)}% say accurate</span>
+        score !== null && (
+          <span className="text-sm text-muted-foreground">{Math.round(score)}% say accurate</span>
+        )
       )}
     </div>
+  );
+}
+
+export function ThumbButton({
+  up,
+  selected,
+  onClick,
+}: {
+  up: boolean;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const Icon = up ? ThumbsUp : ThumbsDown;
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={cn(
+        "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        selected ? "border-olive-deep bg-olive-deep text-paper" : "border-border bg-background hover:bg-muted",
+      )}
+    >
+      <Icon aria-hidden className={cn("size-4", selected && "fill-current")} />
+      {up ? "Yes" : "No"}
+    </button>
   );
 }

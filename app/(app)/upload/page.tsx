@@ -84,23 +84,20 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-5">
+    <div className="h-full">
       {state && (
-        <GenerationView
-          state={state}
-          onReset={() => {
-            if (state.status === "done") setFormKey((key) => key + 1); // fresh form after a success
-            setState(null);
-          }}
-        />
+        <div className="h-full overflow-y-auto p-5">
+          <GenerationView
+            state={state}
+            onReset={() => {
+              if (state.status === "done") setFormKey((key) => key + 1); // fresh form after a success
+              setState(null);
+            }}
+          />
+        </div>
       )}
       {/* Hidden, not unmounted, so "Back to the form" keeps what was typed. */}
-      <div hidden={state !== null}>
-        <h1 className="text-2xl font-semibold">Share a knowledge bank</h1>
-        <p className="mt-1 mb-5 text-sm text-muted-foreground">
-          Upload open material and it becomes a free course of short cards and quizzes. Every
-          card quotes your text and links back to it.
-        </p>
+      <div hidden={state !== null} className="h-full">
         <BankUploadForm key={formKey} onSubmit={upload} />
       </div>
     </div>

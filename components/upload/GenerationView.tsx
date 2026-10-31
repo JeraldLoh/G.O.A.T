@@ -94,7 +94,7 @@ export function GenerationView({
                 <div className="flex items-center justify-between gap-2">
                   <span className="truncate text-xs text-muted-foreground">{card.topic}</span>
                   {card.verified && (
-                    <span className="flex shrink-0 items-center gap-1 rounded-full bg-sunflower px-2 py-0.5 text-[11px] font-medium text-ink">
+                    <span className="flex shrink-0 items-center gap-1 rounded-full bg-sunflower px-2 py-0.5 text-xs font-medium text-ink">
                       <ShieldCheck aria-hidden className="size-3" />
                       Quote verified
                     </span>
@@ -137,8 +137,8 @@ function GenerationSummary({ generation }: { generation: Generation }) {
           detail={`${generation.cardsVerified}/${generation.cardsTotal}`}
         />
         <Metric
-          label="Tokens"
-          value={(generation.inputTokens + generation.outputTokens).toLocaleString()}
+          label="Cards made"
+          value={generation.cardsVerified.toLocaleString()}
         />
       </dl>
     </section>
@@ -148,9 +148,9 @@ function GenerationSummary({ generation }: { generation: Generation }) {
 function Metric({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
     <div className="rounded-lg bg-muted p-2">
-      <dt className="text-[11px] text-muted-foreground">{label}</dt>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="text-base font-semibold tabular-nums">{value}</dd>
-      {detail && <dd className="text-[11px] text-muted-foreground tabular-nums">{detail}</dd>}
+      {detail && <dd className="text-xs text-muted-foreground tabular-nums">{detail}</dd>}
     </div>
   );
 }
