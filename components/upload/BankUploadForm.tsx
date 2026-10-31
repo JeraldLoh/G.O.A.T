@@ -4,12 +4,12 @@ import { FileUp, X } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { LEVEL_LABEL, SUBJECT_META } from "@/components/discovery/subjects";
 import { Button } from "@/components/ui/button";
+import { guessSubject } from "@/components/upload/guessSubject";
 import {
   CreateBankRequestSchema,
   DEFAULT_MAX_WORDS,
   LEVELS,
   LICENSES,
-  SUBJECTS,
   type License,
 } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
@@ -51,6 +51,7 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
   const [file, setFile] = useState<File | null>(null);
   const [fileText, setFileText] = useState<string | null>(null); // .md/.txt contents
   const [text, setText] = useState("");
+  const [title, setTitle] = useState(""); // controlled: the subject guess reads it live
   const [tagsRaw, setTagsRaw] = useState("");
   const [license, setLicense] = useState<License>("CC-BY-4.0");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -86,8 +87,8 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const fields = {
-      title: String(data.get("title") ?? ""),
-      subject: String(data.get("subject") ?? ""),
+      title,
+      subject: guessSubject(title, parseTags(tagsRaw)),
       level: String(data.get("level") ?? ""),
       tags: parseTags(tagsRaw),
       license,
@@ -131,6 +132,8 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
   }
 
   const tags = parseTags(tagsRaw);
+  const subject = guessSubject(title, tags);
+  const SubjectIcon = SUBJECT_META[subject].icon;
 
   return (
     <form
@@ -191,31 +194,22 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
         <input
           id={`${id}-title`}
           name="title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
           placeholder="e.g. Intro to Supply and Demand"
           className={inputClass(errors.title)}
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Subject" htmlFor={`${id}-subject`} error={errors.subject}>
-          <select id={`${id}-subject`} name="subject" defaultValue="science" className={inputClass()}>
-            {SUBJECTS.map((subject) => (
-              <option key={subject} value={subject}>
-                {SUBJECT_META[subject].label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Level" htmlFor={`${id}-level`} error={errors.level}>
-          <select id={`${id}-level`} name="level" defaultValue="beginner" className={inputClass()}>
-            {LEVELS.map((level) => (
-              <option key={level} value={level}>
-                {LEVEL_LABEL[level]}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
+      <Field label="Level" htmlFor={`${id}-level`} error={errors.level}>
+        <select id={`${id}-level`} name="level" defaultValue="beginner" className={inputClass()}>
+          {LEVELS.map((level) => (
+            <option key={level} value={level}>
+              {LEVEL_LABEL[level]}
+            </option>
+          ))}
+        </select>
+      </Field>
 
       <Field label="Tags" htmlFor={`${id}-tags`} hint="Comma separated, e.g. economics, markets">
         <input
@@ -233,6 +227,12 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
             ))}
           </div>
         )}
+        <p className="text-xs text-muted-foreground" aria-live="polite">
+          <SubjectIcon aria-hidden className="mr-1 inline size-3.5 align-[-2px] text-olive-deep" />
+          Filed under{" "}
+          <strong className="font-medium text-foreground">{SUBJECT_META[subject].label}</strong>
+          {subject === "other" && " (add tags like biology or history to sort it)"}
+        </p>
       </Field>
 
       <Field label="License" htmlFor={`${id}-license`} hint="Only upload material you're allowed to share.">
