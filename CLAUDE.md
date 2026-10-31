@@ -96,7 +96,7 @@ Base palette (10 colors, light to dark within each hue family). Define them as C
 
 | Name | Hex | Use |
 |---|---|---|
-| olive | `#797D62` | Primary brand color: tab bar active, primary buttons (with `cream` text), progress bar fill |
+| olive | `#797D62` | Brand color for large shapes: headers, illustrations, chart series (buttons use `olive-deep`) |
 | sage | `#9B9B7A` | Secondary surfaces, inactive chips, borders on dark areas |
 | khaki | `#BAA587` | Borders, dividers, muted icons |
 | peach | `#D9AE94` | Quote block background tint, subtle highlights |
@@ -113,18 +113,20 @@ Added colors (the base palette has no text color, no page background and no erro
 |---|---|---|
 | ink | `#2F3125` | All body and heading text (12.3:1 on `paper`, 9.8:1 on `cream`) |
 | paper | `#FBF6EA` | Page background |
+| linen | `#F3E8CF` | Muted surfaces (`--muted`): area outside the phone column, inactive tabs, skeletons |
 | olive-deep | `#5C6146` | Text-sized olive: links, "correct" quiz feedback, source link (6.0:1 on `paper`) |
-| brick | `#A8432F` | Errors and "wrong answer" quiz feedback (5.5:1 on `paper`) |
-| bark | `#8A5A3C` | Text-sized terracotta/brown (5.4:1 on `paper`) |
+| brick | `#983D2A` | Errors and "wrong answer" quiz feedback (6.4:1 on `paper`, 5.1:1 on `cream`) |
+| bark | `#7A5038` | Muted text (`--muted-foreground`), text-sized terracotta/brown (6.4:1 on `paper`, 5.1:1 on `cream`) |
 | night | `#23241B` | Dark-mode background (`paper` text on it is 14.5:1) |
 
 Accessibility rules (WCAG AA, contrast checked):
 - **Never use a base palette color for text on `paper`, `cream` or white** — none of the 10 reaches 4.5:1. Use `ink`, `olive-deep`, `bark` or `brick` for text.
-- Base colors are for fills, borders and large shapes. On those fills, text is `ink` (passes on everything from `sage` to `sunflower`) — except on `olive`, where button text is `cream`/`paper` and must be bold/large (about 4:1).
+- Base colors are for fills, borders and large shapes. On those fills, text is `ink` (passes on everything from `sage` to `sunflower`) — except on `olive`, where `paper` text is only about 4:1, so primary buttons use `olive-deep` (6.0:1).
 - Do not signal quiz right/wrong by color alone: add a ✓ / ✗ icon and the words "Correct" / "Not quite".
 
-shadcn token mapping (light): `--background: paper`, `--foreground: ink`, `--card: cream`, `--card-foreground: ink`, `--primary: olive`, `--primary-foreground: paper`, `--secondary: sage`, `--secondary-foreground: ink`, `--muted: peach`, `--muted-foreground: bark`, `--accent: sunflower`, `--accent-foreground: ink`, `--destructive: brick`, `--border: khaki`, `--input: khaki`, `--ring: sunflower`.
-Dark mode (optional, only if time allows): `--background: night`, `--foreground: paper`, `--card: #2F3125`, `--primary: sunflower`, `--primary-foreground: ink`.
+shadcn token mapping (light): `--background: paper`, `--foreground: ink`, `--card: cream`, `--card-foreground: ink`, `--primary: olive-deep`, `--primary-foreground: paper`, `--secondary: sage`, `--secondary-foreground: ink`, `--muted: linen`, `--muted-foreground: bark`, `--accent: sunflower`, `--accent-foreground: ink`, `--destructive: brick`, `--border: khaki`, `--input: khaki`, `--ring: sunflower`.
+Dark mode (`.dark` class, optional): `--background: night`, `--foreground: paper`, `--card: ink`, `--primary: sunflower`, `--primary-foreground: ink`, `--muted-foreground: khaki`, `--destructive: #E08A6E`.
+Implemented in `app/globals.css`; every palette color is also a Tailwind color (`bg-sunflower`, `text-olive-deep`, `border-khaki`).
 
 ### Generation pipeline (streaming)
 1. `POST /api/banks`: validate size (live demo cap ~3,000 words), license, tags -> extract text -> save the bank.
