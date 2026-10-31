@@ -9,9 +9,17 @@ import type { BankSummary, Card } from "@/lib/schemas";
 const CONTEXT_CHARS = 450;
 
 // Lane B1. "Source" button + bottom sheet with the quote highlighted in the original text.
-export function SourceSheet({ card, bank }: { card: Card; bank?: BankSummary }) {
+export function SourceSheet({
+  card,
+  bank,
+  onOpenChange,
+}: {
+  card: Card;
+  bank?: BankSummary;
+  onOpenChange?: (open: boolean) => void;
+}) {
   return (
-    <Dialog.Root>
+    <Dialog.Root onOpenChange={onOpenChange}>
       <Dialog.Trigger className="inline-flex items-center gap-1.5 rounded-full border border-khaki bg-background px-3 py-1.5 text-sm font-medium text-olive-deep focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none active:bg-muted">
         <BookOpen className="size-4" aria-hidden />
         Source

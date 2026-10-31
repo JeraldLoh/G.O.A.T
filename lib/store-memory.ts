@@ -1,7 +1,15 @@
 // In-memory backend, loaded from /seed. Used when DEMO_MODE=1, so the demo runs
 // with no database. Data resets on restart and isn't shared between serverless
 // instances, so it can't back a public deployment.
-import { SeedFileSchema, type Bank, type Card, type Flag, type Generation, type Quiz } from "@/lib/schemas";
+import {
+  SeedFileSchema,
+  type Bank,
+  type Card,
+  type Chapter,
+  type Flag,
+  type Generation,
+  type Quiz,
+} from "@/lib/schemas";
 import type { Backend } from "@/lib/store-types";
 import compoundInterest from "@/seed/compound-interest.json";
 import hashTables from "@/seed/hash-tables.json";
@@ -14,6 +22,7 @@ type Db = {
   generations: Generation[];
   flags: Flag[];
   ratings: Map<string, 1 | -1>; // key: `${bankId}:${deviceId}`
+  chapters: Map<string, Chapter[]>;
 };
 
 function loadSeeds(): Db {
@@ -24,6 +33,7 @@ function loadSeeds(): Db {
     generations: [],
     flags: [],
     ratings: new Map(),
+    chapters: new Map(),
   };
   for (const raw of [photosynthesis, hashTables, compoundInterest]) {
     const seed = SeedFileSchema.parse(raw);
@@ -70,6 +80,14 @@ export const memoryBackend: Backend = {
 
   async saveGeneration(generation) {
     getDb().generations.push(generation);
+  },
+
+  async readChapters(bankId) {
+    return getDb().chapters.get(bankId) ?? null;
+  },
+
+  async saveChapters(bankId, chapters) {
+    getDb().chapters.set(bankId, chapters);
   },
 
   async addFlag(input) {

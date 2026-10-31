@@ -20,7 +20,7 @@ export function TabBar() {
       {TABS.map(({ href, label, icon: Icon }) => {
         const active =
           href === "/"
-            ? pathname === "/" || pathname.startsWith("/learn/")
+            ? pathname === "/" || pathname.startsWith("/learn/") || pathname.startsWith("/videos")
             : pathname === href || pathname.startsWith(`${href}/`);
         return (
           <Link

@@ -8,6 +8,7 @@ import {
   type BankFilter,
   type BankSummary,
   type Card,
+  type Chapter,
   type FeedEntry,
   type Flag,
   type Generation,
@@ -109,6 +110,14 @@ export async function saveGeneration(generation: Generation): Promise<void> {
   await backend.saveGeneration(generation);
 }
 
+export async function readChapters(bankId: string): Promise<Chapter[] | null> {
+  return backend.readChapters(bankId);
+}
+
+export async function saveChapters(bankId: string, chapters: Chapter[]): Promise<void> {
+  await backend.saveChapters(bankId, chapters);
+}
+
 /** Counts generations since UTC midnight, for DAILY_GENERATION_LIMIT. */
 export async function countGenerationsToday(): Promise<number> {
   const today = new Date().toISOString().slice(0, 10);
@@ -138,7 +147,10 @@ export async function addRating(
 export async function getStats(): Promise<Stats> {
   const data = await backend.read();
   // Mock runs have no real cost or timing, so they stay out of the evidence numbers.
-  const measured = data.generations.filter((g) => g.model !== MOCK_MODEL);
+  const real = data.generations.filter((g) => g.model !== MOCK_MODEL);
+  // Video script rows have no cards. They count towards total cost but aren't
+  // bank runs, so they stay out of the per-bank averages.
+  const measured = real.filter((g) => g.cardsTotal > 0);
   const sum = (pick: (g: Generation) => number) =>
     measured.reduce((total, g) => total + pick(g), 0);
   const average = (pick: (g: Generation) => number) =>
@@ -150,7 +162,7 @@ export async function getStats(): Promise<Stats> {
     quizzes: data.quizzes.length,
     verifiedPct: percent(sum((g) => g.cardsVerified), sum((g) => g.cardsTotal)),
     generations: measured.length,
-    totalCostUsd: sum((g) => g.costUsd),
+    totalCostUsd: real.reduce((total, g) => total + g.costUsd, 0),
     avgCostUsd: average((g) => g.costUsd),
     avgDurationMs: average((g) => g.durationMs),
     flags: data.flagCount,

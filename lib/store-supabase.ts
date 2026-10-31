@@ -1,13 +1,16 @@
 // Supabase backend. Used unless DEMO_MODE=1. Translates between the snake_case
 // columns in supabase/migrations and the camelCase types in lib/schemas.ts.
+import { z } from "zod";
 import {
   BankSchema,
   CardSchema,
+  ChapterSchema,
   FlagSchema,
   GenerationSchema,
   QuizSchema,
   type Bank,
   type Card,
+  type Chapter,
   type Generation,
   type Quiz,
 } from "@/lib/schemas";
@@ -212,6 +215,24 @@ export const supabaseBackend: Backend = {
           cards_verified: generation.cardsVerified,
           created_at: generation.createdAt,
         }),
+    );
+  },
+
+  async readChapters(bankId) {
+    const result = await getSupabase()
+      .from("chapter_scripts")
+      .select("chapters")
+      .eq("bank_id", bankId)
+      .maybeSingle();
+    const row = unwrap<{ chapters: unknown } | null>(result);
+    return row ? z.array(ChapterSchema).parse(row.chapters) : null;
+  },
+
+  async saveChapters(bankId: string, chapters: Chapter[]) {
+    check(
+      await getSupabase()
+        .from("chapter_scripts")
+        .upsert({ bank_id: bankId, chapters }, { onConflict: "bank_id" }),
     );
   },
 

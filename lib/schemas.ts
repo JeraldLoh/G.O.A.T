@@ -111,6 +111,44 @@ export const FlagSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
+/** A stock background clip. Decoration only: facts stay in the caption and narration. */
+export const StockVideoSchema = z.object({
+  url: z.string().url(),
+  poster: z.string(),
+  credit: z.string(),
+  pageUrl: z.string(),
+});
+
+/** One narrated screen of a video chapter. Grounded through cardId: it inherits that card's verified quote. */
+export const SceneSchema = z.object({
+  cardId: z.string(),
+  caption: z.string().min(1),
+  narration: z.string().min(1),
+  emoji: z.string().max(16),
+  /** Search term for a background clip. Absent on card-based chapters and older scripts. */
+  videoQuery: z.string().optional(),
+  /** null: searched, nothing usable. Absent: not searched yet. */
+  video: StockVideoSchema.nullable().optional(),
+});
+
+/** A video chapter: one topic of a bank, played as a sequence of scenes. */
+export const ChapterSchema = z.object({
+  id: z.string(),
+  bankId: z.string(),
+  topic: z.string().min(1),
+  title: z.string().min(1),
+  order: z.number().int().nonnegative(),
+  scenes: z.array(SceneSchema).min(1),
+});
+
+/** One screen of a video feed: a chapter with what its player needs. */
+export const VideoItemSchema = z.object({
+  chapter: ChapterSchema,
+  bank: BankSummarySchema,
+  cards: z.array(CardSchema),
+  quizzes: z.array(QuizSchema),
+});
+
 export const FeedEntrySchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("card"), card: CardSchema, bank: BankSummarySchema }),
   z.object({ kind: z.literal("quiz"), quiz: QuizSchema, bank: BankSummarySchema }),
@@ -195,6 +233,8 @@ export const LocalFiltersSchema = z.object({
 export const LocalProgressSchema = z.object({
   seen: z.array(z.string()),
   quiz: z.record(z.string(), z.boolean()),
+  /** Video chapters played to the end. Reading a chapter's cards doesn't count. */
+  watched: z.array(z.string()).default([]),
 });
 
 export type Subject = z.infer<typeof SubjectSchema>;
@@ -207,6 +247,10 @@ export type Card = z.infer<typeof CardSchema>;
 export type Quiz = z.infer<typeof QuizSchema>;
 export type Generation = z.infer<typeof GenerationSchema>;
 export type Flag = z.infer<typeof FlagSchema>;
+export type StockVideo = z.infer<typeof StockVideoSchema>;
+export type Scene = z.infer<typeof SceneSchema>;
+export type Chapter = z.infer<typeof ChapterSchema>;
+export type VideoItem = z.infer<typeof VideoItemSchema>;
 export type FeedEntry = z.infer<typeof FeedEntrySchema>;
 export type Stats = z.infer<typeof StatsSchema>;
 export type SeedFile = z.infer<typeof SeedFileSchema>;
