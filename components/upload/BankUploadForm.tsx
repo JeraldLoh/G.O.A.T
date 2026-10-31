@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, FileText, Upload, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, CircleAlert, FileText, LoaderCircle, Upload, X } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { LEVEL_ICON, OptionChip } from "@/components/discovery/Chip";
 import { LEVEL_LABEL, SUBJECT_META } from "@/components/discovery/subjects";
 import { Button } from "@/components/ui/button";
 import { guessSubject } from "@/components/upload/guessSubject";
+import { TagInput } from "@/components/upload/TagInput";
 import {
   CreateBankRequestSchema,
   DEFAULT_MAX_WORDS,
@@ -16,7 +17,10 @@ import {
 } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
 
-const MAX_FILE_BYTES = 1_000_000;
+// Text files are sent as-is, so they stay small. PDFs are read in the browser and
+// only their text is sent, so a bigger file is fine.
+const MAX_TEXT_FILE_BYTES = 1_000_000;
+const MAX_PDF_BYTES = 10_000_000;
 
 export const LICENSE_LABEL: Record<License, string> = {
   "CC0-1.0": "CC0 1.0 (no rights reserved)",
@@ -34,31 +38,25 @@ export type UploadRequest = { body: BodyInit; headers?: HeadersInit; title: stri
 
 const countWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
-export function parseTags(raw: string): string[] {
-  const tags = raw
-    .split(",")
-    .map((tag) => tag.trim().toLowerCase().replace(/^#/, "").replace(/\s+/g, "-"))
-    .filter(Boolean);
-  return [...new Set(tags)];
-}
-
 /**
  * Two-step upload. Step 1 is only the source (paste, pick or drop a file);
  * step 2 asks for title, level and tags, with license/attribution/URL folded
- * under "Sharing details". Text files are read in the browser and sent as
- * JSON; PDFs go as multipart so the server can extract the text.
+ * under "Sharing details". Every file is read in the browser (PDFs with
+ * unpdf), so the word count and limit apply to PDFs too and the request is
+ * always JSON text.
  */
 export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest) => void }) {
   const id = useId();
   const fileInput = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<1 | 2>(1);
   const [file, setFile] = useState<File | null>(null);
-  const [fileText, setFileText] = useState<string | null>(null); // .md/.txt contents
+  const [fileText, setFileText] = useState<string | null>(null); // the file's text, PDFs included
+  const [reading, setReading] = useState(false);
   const [text, setText] = useState("");
   const [dragging, setDragging] = useState(false);
   const [title, setTitle] = useState("");
   const [level, setLevel] = useState<Level>("beginner");
-  const [tagsRaw, setTagsRaw] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [license, setLicense] = useState<License>("CC-BY-4.0");
   const [attribution, setAttribution] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
@@ -67,10 +65,9 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
 
   const isPdf = file?.name.toLowerCase().endsWith(".pdf") ?? false;
   const sourceText = fileText ?? text;
-  const words = isPdf ? null : countWords(sourceText);
-  const tooLong = words !== null && words > DEFAULT_MAX_WORDS;
-  const hasSource = isPdf || sourceText.trim().length > 0;
-  const tags = parseTags(tagsRaw);
+  const words = countWords(sourceText);
+  const tooLong = words > DEFAULT_MAX_WORDS;
+  const hasSource = sourceText.trim().length > 0;
   const subject = guessSubject(title, tags);
   const SubjectIcon = SUBJECT_META[subject].icon;
   const needsAttribution = NEEDS_ATTRIBUTION.includes(license);
@@ -83,15 +80,43 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
       setErrors({ text: "Use a .md, .txt or .pdf file." });
       return;
     }
-    if (picked.size > MAX_FILE_BYTES) {
-      setErrors({ text: "Files must be under 1 MB." });
+    const pdf = name.endsWith(".pdf");
+    const limit = pdf ? MAX_PDF_BYTES : MAX_TEXT_FILE_BYTES;
+    if (picked.size > limit) {
+      const mb = (picked.size / 1_000_000).toFixed(1);
+      const kind = pdf ? "PDFs" : "Text files";
+      setErrors({ text: `${picked.name} is ${mb} MB. ${kind} must be under ${limit / 1_000_000} MB.` });
       return;
     }
     setFile(picked);
-    setFileText(name.endsWith(".pdf") ? null : await picked.text());
+    setFileText(null);
+    if (pdf) {
+      setReading(true);
+      try {
+        // Loaded only when a PDF is picked, so the page stays light.
+        const { extractText } = await import("unpdf");
+        const { text: pdfText } = await extractText(new Uint8Array(await picked.arrayBuffer()), {
+          mergePages: true,
+        });
+        if (!pdfText.trim()) {
+          setFile(null);
+          setErrors({ text: "This PDF has no selectable text (it may be a scan). Try a text-based PDF." });
+          return;
+        }
+        setFileText(pdfText);
+      } catch {
+        setFile(null);
+        setErrors({ text: "Couldn't read this PDF. Try another file or paste the text." });
+        return;
+      } finally {
+        setReading(false);
+      }
+    } else {
+      setFileText(await picked.text());
+    }
     // Suggest a title from the file name, e.g. "supply-and-demand.md" -> "Supply and demand".
     if (!title) {
-      const base = picked.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim();
+      const base = picked.name.replace(/\.[^.]+$/, "").replace(/[-_\s]+/g, " ").trim();
       setTitle(base.charAt(0).toUpperCase() + base.slice(1));
     }
   }
@@ -99,10 +124,12 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
   function clearFile() {
     setFile(null);
     setFileText(null);
+    setErrors({});
     if (fileInput.current) fileInput.current.value = "";
   }
 
   function goToDetails() {
+    if (reading) return;
     if (!hasSource) return setErrors({ text: "Paste some text or choose a file." });
     if (tooLong) return setErrors({ text: `Keep it under ${DEFAULT_MAX_WORDS.toLocaleString()} words for now.` });
     setErrors({});
@@ -119,8 +146,7 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
       license,
       attribution: needsAttribution ? attribution : "",
       sourceUrl: sourceUrl.trim() || undefined,
-      // PDFs are extracted on the server; a placeholder keeps the schema check for the other fields.
-      text: isPdf ? "pdf" : sourceText,
+      text: sourceText,
     };
 
     const found: Record<string, string> = {};
@@ -140,21 +166,11 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
     }
     if (Object.keys(found).length > 0 || !parsed.success) return;
 
-    if (isPdf && file) {
-      const form = new FormData();
-      for (const [key, value] of Object.entries(parsed.data)) {
-        if (key === "text" || value === undefined) continue;
-        form.set(key, Array.isArray(value) ? value.join(",") : String(value));
-      }
-      form.set("file", file);
-      onSubmit({ body: form, title: parsed.data.title });
-    } else {
-      onSubmit({
-        body: JSON.stringify(parsed.data),
-        headers: { "Content-Type": "application/json" },
-        title: parsed.data.title,
-      });
-    }
+    onSubmit({
+      body: JSON.stringify(parsed.data),
+      headers: { "Content-Type": "application/json" },
+      title: parsed.data.title,
+    });
   }
 
   const fileInputEl = (
@@ -192,8 +208,15 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
               <FileText aria-hidden className="size-8 shrink-0 text-olive-deep" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{file.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {isPdf ? "PDF" : `${words?.toLocaleString()} words`}
+                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  {reading ? (
+                    <>
+                      <LoaderCircle aria-hidden className="size-4 animate-spin" />
+                      Reading PDF…
+                    </>
+                  ) : (
+                    `${isPdf ? "PDF · " : ""}${words.toLocaleString()} words`
+                  )}
                 </p>
               </div>
               <button
@@ -236,25 +259,29 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
               >
                 <Upload aria-hidden className="size-6 text-olive-deep" />
                 <span className="font-medium">Choose or drop a file</span>
-                <span className="text-sm text-muted-foreground">.md, .txt or .pdf, up to 1 MB</span>
+                <span className="text-sm text-muted-foreground">.md or .txt up to 1 MB · .pdf up to 10 MB</span>
               </button>
             </div>
           )}
           {fileInputEl}
           {errors.text && (
-            <p role="alert" className="mt-2 text-sm text-destructive">
+            <p
+              role="alert"
+              className="mt-3 flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+            >
+              <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
               {errors.text}
             </p>
           )}
         </div>
 
         <div className="flex items-center gap-3 border-t bg-background p-4">
-          {words !== null && words > 0 && (
+          {words > 0 && !reading && (
             <span className={cn("text-sm text-muted-foreground tabular-nums", tooLong && "text-destructive")}>
               {words.toLocaleString()} / {DEFAULT_MAX_WORDS.toLocaleString()} words
             </span>
           )}
-          <Button size="lg" className="ml-auto h-11 min-w-32 text-base" onClick={goToDetails}>
+          <Button size="lg" className="ml-auto h-11 min-w-32 text-base" disabled={reading} onClick={goToDetails}>
             Next
           </Button>
         </div>
@@ -276,16 +303,18 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
             type="button"
             aria-label="Back to step 1"
             onClick={() => setStep(1)}
-            className="-ml-3 flex size-11 items-center justify-center rounded-full hover:bg-muted"
+            className="-ml-3 flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-muted"
           >
             <ArrowLeft aria-hidden className="size-5" />
           </button>
-          <p className="text-sm font-medium text-olive-deep">Step 2 of 2</p>
-          <span className="ml-auto truncate text-sm text-muted-foreground">
-            {file ? file.name : `${words?.toLocaleString()} words`}
-          </span>
+          <p className="shrink-0 text-sm font-medium whitespace-nowrap text-olive-deep">Step 2 of 2</p>
         </div>
         <h1 className="mt-1 text-2xl font-semibold">Describe it</h1>
+        <p className="mt-2 flex min-w-0 items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm">
+          <FileText aria-hidden className="size-4 shrink-0 text-olive-deep" />
+          <span className="min-w-0 flex-1 truncate">{file ? file.name : "Pasted text"}</span>
+          <span className="shrink-0 text-muted-foreground tabular-nums">{words.toLocaleString()} words</span>
+        </p>
 
         <div className="mt-5 grid gap-6">
           <Field label="Title" htmlFor={`${id}-title`} error={errors.title}>
@@ -314,26 +343,16 @@ export function BankUploadForm({ onSubmit }: { onSubmit: (request: UploadRequest
             </div>
           </fieldset>
 
-          <Field label="Tags" htmlFor={`${id}-tags`} hint="Separate with commas">
-            <input
-              id={`${id}-tags`}
-              value={tagsRaw}
-              onChange={(event) => setTagsRaw(event.target.value)}
-              placeholder="e.g. economics, markets"
-              className={inputClass()}
-            />
-            <div className="flex flex-wrap items-center gap-1.5" aria-live="polite">
+          <Field label="Tags" htmlFor={`${id}-tags`}>
+            <TagInput id={`${id}-tags`} tags={tags} onChange={setTags} />
+            <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
+              Topic
               <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-cream px-3 text-sm font-medium">
                 <SubjectIcon aria-hidden className="size-4 text-olive-deep" />
                 {SUBJECT_META[subject].label}
                 <span className="sr-only">(topic, from your title and tags)</span>
               </span>
-              {tags.map((tag) => (
-                <span key={tag} className="inline-flex h-7 items-center rounded-full bg-muted px-3 text-sm">
-                  #{tag}
-                </span>
-              ))}
-            </div>
+            </p>
           </Field>
 
           <section className="rounded-2xl border">

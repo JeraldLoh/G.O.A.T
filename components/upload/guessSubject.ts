@@ -1,7 +1,7 @@
 import type { Subject } from "@/lib/schemas";
 
 // Keywords per subject, matched against tags and title words. Keep them
-// lowercase; multi-word tags are hyphenated by parseTags (e.g. "data-structures").
+// lowercase; multi-word tags are hyphenated by normalizeTag (e.g. "data-structures").
 const KEYWORDS: Record<Exclude<Subject, "other">, string[]> = {
   science: [
     "science", "biology", "chemistry", "physics", "plants", "plant", "photosynthesis", "cells",
