@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="t">
+  <title id="t">Link Lock logo</title>
+  <!-- Earthy Tones: cream tile, terracotta chain-link shackle, olive-deep body shaped like a phone screen -->
+  <rect width="240" height="240" rx="56" fill="#F1DCA7"/>
+  <!-- shackle drawn as a chain link, tucked behind the body -->
+  <rect x="76" y="30" width="88" height="120" rx="44" fill="none" stroke="#D08C60" stroke-width="16"/>
+  <!-- lock body: portrait, like a short-form video screen -->
+  <rect x="60" y="98" width="120" height="120" rx="24" fill="#5C6146"/>
+  <!-- play button = short video -->
+  <path d="M107 112 L107 148 L140 130 Z" fill="#FFCB69" stroke="#FFCB69" stroke-width="6" stroke-linejoin="round"/>
+  <!-- open book = learning -->
+  <path d="M120 170 Q104 162 86 166 V194 Q104 190 120 198 Z" fill="#F1DCA7"/>
+  <path d="M120 170 Q136 162 154 166 V194 Q136 190 120 198 Z" fill="#F1DCA7"/>
+  <path d="M120 170 V198" stroke="#5C6146" stroke-width="3"/>
+  <!-- check badge = verified quote -->
+  <circle cx="176" cy="208" r="20" fill="#FFCB69" stroke="#F1DCA7" stroke-width="6"/>
+  <path d="M167 208 L174 215 L186 201" fill="none" stroke="#2F3125" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
